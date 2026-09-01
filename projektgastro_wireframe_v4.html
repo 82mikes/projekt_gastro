@@ -1,0 +1,4088 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProjektGastro.cz</title>
+<meta name="description" content="Projekční příprava gastronomických provozů od návrhu provozu po projektovou dokumentaci a odborný dohled realizace.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<!--
+  POZNÁMKA PRO PROGRAMÁTORA:
+  Tento wireframe je SPA-like — stránky se přepínají JavaScriptem (showPage()),
+  takže <title> a <meta description> aktualizuje JS dynamicky (viz pageMeta
+  + showPage() na konci souboru).
+
+  PRO PRODUKČNÍ NASAZENÍ MUSÍ BÝT TITULKY A META DESCRIPTIONS RENDEROVÁNY
+  SERVER-SIDE (kvůli Google crawleru a sdílení odkazů). Mapping titles/meta
+  pro jednotlivé URL je v JS objektu `pageMeta` — stačí přenést do
+  routeru / template enginu. Doporučená dodatečná meta:
+
+    <meta property="og:title" content="...">
+    <meta property="og:description" content="...">
+    <meta property="og:image" content="https://www.projektgastro.cz/og.jpg">
+    <meta property="og:url" content="https://www.projektgastro.cz/[slug]">
+    <meta property="og:type" content="website">
+    <link rel="canonical" href="https://www.projektgastro.cz/[slug]">
+    <link rel="icon" href="/favicon.ico">
+
+  Schema.org JSON-LD (kritické dle SEO checklistu v briefu):
+    - Organization na všech stránkách
+    - BreadcrumbList na každé podstránce
+    - FAQ Schema na /faq (povinné — Google rich snippets)
+
+  =========================================================
+  KONTROLNÍ SEZNAM PRO PRODUKČNÍ NASAZENÍ (TL;DR):
+  =========================================================
+  1. SEO: per-page <title>, <meta description>, <link rel="canonical">,
+     Open Graph tagy, og:image (1200×630 jpg). Mapping dat v JS
+     objektu `pageMeta` na konci souboru.
+  2. Schema.org JSON-LD: Organization, BreadcrumbList, FAQ.
+  3. Sitemap.xml + robots.txt (povolit /, /sluzby, atd.;
+     blokovat /kontakt/dekujeme, /404, případně /admin/).
+  4. Favicon: zde dodáno /favicon.svg. Pro starší browsery doplnit
+     PNG variantu /favicon-32.png, případně apple-touch-icon.
+  5. KONTAKTNÍ FORMULÁŘ: wireframe jen volá showPage('dekujeme').
+     Produkce vyžaduje:
+       - server endpoint (POST), nikoli pouhý JS
+       - server-side validace (nedůvěřovat klientovi)
+       - reCAPTCHA v3 / honeypot proti spamu (dle briefu)
+       - uložení do DB/CRM + e-mailová notifikace
+       - HTTP redirect na /kontakt/dekujeme (kvůli měření konverzí
+         v GA4 přes pageview na success URL, ne JS event na stejné URL)
+       - <meta name="robots" content="noindex, follow"> na /dekujeme
+       - GA4 event lead_form_submission + GTM dataLayer.push
+  6. COOKIE CONSENT: wireframe je vizuální mockup, banner se každým
+     refresh objevuje znovu. Produkce vyžaduje reálné CMP řešení
+     (Cookiebot, Complianz nebo vlastní), persistenci souhlasu
+     (cookie / localStorage na 12 měsíců), Google Consent Mode v2
+     integraci. Před souhlasem NESPOUŠTĚT GA4, Sklik a marketingové
+     tagy — výjimkou jsou pouze nezbytné technické cookies.
+  7. OBRÁZKY: wireframe používá optimalizované JPG (kvalita 85).
+     Pro produkci doporučujeme:
+       - konverzi do WebP (dalších cca 25 % úspory)
+       - <picture> element s fallbacky pro starší browsery
+       - loading="lazy" na všechny obrázky pod fold
+       - srcset / sizes pro responsive image delivery
+       - alt texty jako povinné pole v CMS (validace před uložením)
+  8. PROJEKTY: aktuálně je hotová pouze šablona detailu pro
+     Hotel Imperial Praha. Pro produkci je třeba:
+       - vytvořit unikátní detail stránku pro každý projekt
+       - URL pattern: /projekty/<slug-projektu>
+       - aktualizovat onclick handlery na project-card elementech
+         (aktuálně všechny vedou na showPage('projekt-imperial'))
+  9. 404: server MUSÍ vracet reálný HTTP 404 status, ne redirect na 200.
+     <meta name="robots" content="noindex"> v hlavičce.
+     GA4 event 404_error pro identifikaci nefunkčních odkazů.
+  10. PRINT STYLESHEET: @page named regions (header/footer per stránka)
+      podporuje Chrome plně, Safari částečně, Firefox velmi omezeně.
+      Brand hlavička v <body> přes .print-header je fallback pro
+      všechny browsery.
+  =========================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     DESIGN TOKENS — dle specifikace v zadání (Word doc)
+     ============================================================ */
+  :root {
+    --bg: #FFFFFF;
+    --bg-2: #F7F8FA;          /* sekundární pozadí */
+    --ink: #1E2A38;           /* primární tmavá — nadpisy, footer */
+    --text: #1A1A1A;          /* běžný text */
+    --text-2: #666666;        /* mikrocopy, popisky */
+    --brand: #2F6DF6;         /* akcent / CTA */
+    --brand-hover: #1B5CE8;
+    --brand-soft: #eaf0fe;
+    --line: #E2E8F0;
+    --radius: 6px;
+    --maxw: 1200px;
+    --shadow-card: 0 1px 4px rgba(0,0,0,0.07);
+    --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    font-size: 16px;
+  }
+
+  /* ============================================================
+     READING PROGRESS BAR — proužek nahoře ukazující scroll
+     pozici. Aktivní pouze na dlouhých právních stránkách
+     (GDPR, Cookie Policy, Podmínky použití).
+     ============================================================ */
+  .reading-progress {
+    position: fixed;
+    top: 0; left: 0;
+    width: 0%;
+    height: 3px;
+    background: var(--brand);
+    z-index: 300;
+    transition: width 0.1s linear;
+    display: none;
+    pointer-events: none;
+  }
+  body.show-progress .reading-progress { display: block; }
+
+  /* Na stránkách s reading-progress barem schováme nativní scrollbar,
+     aby se vizuální indikátory pozice nepřebíjely. Scrollování přes
+     kolečko, trackpad, klávesy a touch funguje normálně. */
+  body.show-progress {
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;     /* IE/Edge legacy */
+  }
+  body.show-progress::-webkit-scrollbar { display: none; } /* Webkit/Blink */
+
+  /* ============================================================
+     REVEAL ON SCROLL — elementy se objevují jak vstupují do viewportu.
+     Intersection Observer přidá .in-view, CSS animuje translateY + opacity.
+     Respektuje prefers-reduced-motion (přechody se vypnou).
+     ============================================================ */
+  .reveal {
+    opacity: 0;
+    translate: 0 24px;          /* `translate` property — composes with transform, neblokuje tilt */
+    transition: opacity 0.55s ease-out, translate 0.55s ease-out;
+    will-change: opacity, translate;
+  }
+  .reveal.in-view {
+    opacity: 1;
+    translate: 0 0;
+  }
+  /* Stagger — sourozenci v gridu se odhalují postupně, ne najednou */
+  .reveal-stagger > .reveal { transition-delay: 0s; }
+  .reveal-stagger > .reveal:nth-child(2) { transition-delay: 0.08s; }
+  .reveal-stagger > .reveal:nth-child(3) { transition-delay: 0.16s; }
+  .reveal-stagger > .reveal:nth-child(4) { transition-delay: 0.24s; }
+  .reveal-stagger > .reveal:nth-child(5) { transition-delay: 0.32s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal,
+    .reveal-stagger > .reveal {
+      opacity: 1 !important;
+      translate: 0 0 !important;
+      transform: none !important;
+      transition: none !important;
+      transition-delay: 0s !important;
+    }
+    .reading-progress { transition: none !important; }
+  }
+
+  /* ============================================================
+     3D TILT na kartách — Apple/Linear/Stripe-style premium hover.
+     Karta se naklání podle pozice kurzoru. CSS proměnné --tilt-x/y
+     nastavuje JS. `transform` se používá pro perspektivu + rotaci;
+     `translate` property zůstává volný pro reveal-up animaci a hover lift.
+     ============================================================ */
+  .card,
+  .project-card {
+    /* `translate` property se používá pro reveal + hover lift, transform pro tilt */
+    transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    transform-style: preserve-3d;
+    transition: transform 0.18s ease-out, box-shadow 0.2s ease-out, translate 0.2s ease-out;
+  }
+
+  /* ============================================================
+     SMOOTH PAGE TRANSITIONS — fade + lehký translate při změně stránky
+     Animace se přehraje při každém přidání .active třídy
+     (tj. při každém showPage()).
+     ============================================================ */
+  @keyframes pageEnter {
+    from { opacity: 0; translate: 0 12px; }
+    to   { opacity: 1; translate: 0 0; }
+  }
+  .page.active {
+    animation: pageEnter 0.3s ease-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .page.active { animation: none; }
+    .card, .project-card { transform: none !important; transition: none !important; }
+  }
+
+  /* ============================================================
+     ANOTACE PRO TÝM
+     ============================================================ */
+  .annotation-bar {
+    background: #fff8dc;
+    border-bottom: 1px solid #f0d97a;
+    padding: 0.55rem 1.5rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6b5413;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+  .annotation-bar strong { color: var(--brand); }
+
+  /* ============================================================
+     PLACEHOLDER (šrafování pro fotky)
+     ============================================================ */
+  .ph {
+    background: repeating-linear-gradient(
+      45deg, #eef2f7, #eef2f7 8px, #e3e9f1 8px, #e3e9f1 16px
+    );
+    border: 1px dashed #b8c2d1;
+    color: #7e8aa0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+    padding: 1rem;
+    border-radius: var(--radius);
+  }
+
+  /* ============================================================
+     NAV — sticky se shrink chováním
+     ============================================================ */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding: 0 1.5rem;          /* gutter stejný jako section padding, aby se obsah srovnal */
+    transition: padding 0.2s ease;
+  }
+  .nav-inner {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0.6rem 0;          /* horizontal padding přesunut na .nav výše */
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1.25rem;
+    transition: padding 0.2s ease;
+  }
+  .nav.scrolled .nav-inner { padding: 0.4rem 0; }
+  .nav.scrolled .logo-img { height: 31px; }
+
+  .logo { display: flex; align-items: center; cursor: pointer; }
+  .logo-img {
+    height: 46px;           /* o dalších 15 % menší (54 → 46) */
+    width: auto;
+    display: block;
+    transition: height 0.2s ease;
+  }
+
+  .menu {
+    display: flex; gap: 1.5rem; list-style: none;
+    justify-content: center;
+  }
+  .menu a {
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 0.4rem 0;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .menu a:hover { color: var(--brand); }
+  .menu a.active { color: var(--brand); border-bottom-color: var(--brand); }
+
+  .nav-actions { display: flex; align-items: center; gap: 1rem; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.64rem 1.19rem;     /* globální menší formát (původně 0.75/1.4 rem) */
+    border-radius: var(--radius);
+    text-decoration: none;
+    font-size: 0.81rem;            /* globální menší font (původně 0.95 rem) */
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--brand); color: white; border-color: var(--brand); }
+  .btn-primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+  .btn-outline {
+    background: transparent;
+    color: var(--brand);
+    border-color: var(--brand);
+  }
+  .btn-outline:hover { background: var(--brand-soft); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--brand);
+    border: none;
+    padding: 0.5rem 0;
+    font-size: 0.81rem;
+  }
+  .btn-ghost:hover { text-decoration: underline; }
+
+  .phone {
+    display: flex; align-items: center; gap: 0.4rem;
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .phone-icon { color: var(--brand); }
+
+  /* ============================================================
+     PAGE / SECTIONS
+     ============================================================ */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  section { padding: 2.5rem 1.5rem; }
+  section.alt { background: var(--bg-2); }
+  .container { max-width: var(--maxw); margin: 0 auto; }
+
+  .eyebrow {
+    color: var(--brand);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+  h1 { font-size: 2.7rem; line-height: 1.15; letter-spacing: -0.02em; color: var(--ink); font-weight: 700; }
+  h2 { font-size: 1.8rem; line-height: 1.2; letter-spacing: -0.01em; color: var(--ink); margin-bottom: 0.6rem; font-weight: 700; text-transform: uppercase; }
+  h2.subtle { text-transform: none; font-size: 1.4rem; letter-spacing: -0.02em; }
+  h3 { font-size: 1rem; color: var(--ink); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
+  h3.normal { text-transform: none; font-size: 1.3rem; letter-spacing: -0.01em; }
+  h4 { font-size: 1.1rem; color: var(--ink); margin-bottom: 0.4rem; font-weight: 700; }
+  .subtitle { color: var(--text-2); font-size: 1rem; max-width: 800px; margin-bottom: 2.5rem; line-height: 1.6; }
+  .section-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; gap: 2rem; }
+  .right-link { color: var(--brand); text-decoration: none; font-weight: 600; font-size: 0.95rem; white-space: nowrap; cursor: pointer; }
+  .right-link:hover { text-decoration: underline; }
+
+  /* ============================================================
+     HERO (Home)
+     ============================================================ */
+  .hero {
+    padding: 2rem 1.5rem 2.5rem;
+  }
+  .hero-grid {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 3.5rem;
+    align-items: center;
+  }
+  .hero h1 { margin-bottom: 1.5rem; }
+  .hero-bullets {
+    color: var(--text);
+    font-size: 1rem;
+    margin-bottom: 2rem;
+    font-weight: 500;
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1rem;
+  }
+  .hero-bullets span:not(:last-child)::after {
+    content: "|";
+    color: var(--text-2);
+    margin-left: 1rem;
+    font-weight: 400;
+  }
+  .hero-cta-row { display: flex; gap: 0.85rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .hero-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    color: var(--text-2);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .hero-note-icon { color: var(--brand); flex-shrink: 0; margin-top: 1px; }
+  .hero-image {
+    height: 460px;
+    /* Fotka v hero sekci. Pokud `projektgastro_hero.jpg` neexistuje, zobrazí se šrafovaný fallback.
+       PRODUKČNÍ NASAZENÍ — image performance:
+       - Konvertovat hero.jpg na WebP (úspora cca 25–30 %)
+       - Použít <picture> s WebP zdrojem a JPG fallbackem:
+           <picture>
+             <source srcset="projektgastro_hero.webp" type="image/webp">
+             <img src="projektgastro_hero.jpg" alt="..." loading="eager">
+           </picture>
+       - Pro fotky v hero sekci NEpoužívat loading="lazy" (jsou above the fold)
+       - Pro všechny ostatní fotky (.service-image, .project-image, .project-detail-image)
+         přidat loading="lazy"
+       - srcset/sizes pro responsive delivery na různé viewporty
+    */
+    background:
+      url("projektgastro_hero.jpg") center/cover no-repeat,
+      repeating-linear-gradient(45deg, #eef2f7 0 8px, #e3e9f1 8px 16px);
+    /* Měkký rozplyv směrem doleva (k textu). Vpravo plně viditelné, vlevo mizí. */
+    -webkit-mask-image: linear-gradient(to left, black 55%, transparent 100%);
+    mask-image: linear-gradient(to left, black 55%, transparent 100%);
+  }
+
+  /* ============================================================
+     CARDS — služby, cílovky
+     ============================================================ */
+  .cards-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+  }
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1.75rem 1.5rem;
+    cursor: pointer;
+    display: flex; flex-direction: column;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-card-hover);
+    translate: 0 -3px;
+  }
+  .card-icon {
+    width: 40px; height: 40px;
+    border: 1.5px solid var(--brand);
+    color: var(--brand);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 1.25rem;
+    font-size: 1.1rem;
+  }
+  /* Vlastní ilustrované ikony (PNG) — bez rámečku, větší, aby ilustrace vynikla. */
+  .card-icon-img {
+    width: 72px; height: 72px;
+    object-fit: contain;
+    display: block;
+    margin-bottom: 1rem;
+  }
+  .card p { color: var(--text-2); font-size: 0.92rem; margin-bottom: 1rem; flex: 1; }
+  .card .typical { color: var(--text-2); font-size: 0.82rem; margin-bottom: 1rem; padding-top: 0.75rem; border-top: 1px dashed var(--line); }
+  .card .typical strong { color: var(--ink); display: block; margin-bottom: 0.25rem; font-weight: 600; }
+  .card .more { color: var(--brand); text-decoration: none; font-weight: 600; font-size: 0.9rem; margin-top: auto; }
+  .card .more:hover { text-decoration: underline; }
+
+  /* ============================================================
+     PROJEKTY — karty s citátem
+     ============================================================ */
+  .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+  .project-card {
+    background: var(--bg);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+    display: flex; flex-direction: column;
+  }
+  .project-card:hover { box-shadow: var(--shadow-card-hover); translate: 0 -3px; }
+  .project-image { width: 100%; height: 200px; object-fit: cover; display: block; }
+  .project-body { padding: 1.25rem 1.25rem 1.5rem; flex: 1; display: flex; flex-direction: column; }
+  .project-card h4 { margin-bottom: 0.25rem; font-size: 1.1rem; font-weight: 700; }
+  .project-tag { color: var(--brand); font-size: 0.9rem; margin-bottom: 0.75rem; font-weight: 500; }
+  .project-meta { color: var(--text-2); font-size: 0.85rem; margin-bottom: 1rem; }
+  .project-quote { font-style: italic; color: var(--text); font-size: 0.9rem; padding: 1rem 0; border-top: 1px dashed var(--line); margin-top: auto; }
+  .project-quote-source { font-size: 0.8rem; color: var(--text-2); margin-top: 0.5rem; font-style: normal; }
+  .project-card .more { color: var(--brand); font-weight: 600; font-size: 0.88rem; margin-top: 0.75rem; }
+
+  /* ============================================================
+     PROCES — typografická lineární osa (5 kroků)
+     ============================================================ */
+  .process {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    position: relative;
+    margin-top: 2rem;
+  }
+  /* Vodorovná spojnice mezi kruhy ve workflow diagramu (Blueprint styl) */
+  .process::before {
+    content: "";
+    position: absolute;
+    top: calc(1.5rem + 24px);     /* horní padding .step + poloměr kruhu (48/2) */
+    left: 10%;
+    right: 10%;
+    height: 1.5px;
+    background: var(--brand);
+    z-index: 0;
+  }
+  /* 3-krokový variant pro stránku Děkujeme (Co se bude dít dál) */
+  .process.three-step { grid-template-columns: repeat(3, 1fr); }
+  .process.three-step::before { left: 16.67%; right: 16.67%; }
+
+  /* ============================================================
+     PROCESS DIAGRAM ANIMATION — scroll-triggered
+     Linka mezi kruhy se vykresluje zleva doprava, kruhy + texty
+     se objevují v sync s tím, jak linka prochází jejich pozicí.
+     Trigger přes Intersection Observer (.process.anim-running).
+     ============================================================ */
+  .process::before {
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 2s ease-out;
+  }
+  .process .step-num {
+    opacity: 0;
+    transform: scale(0.55);
+    transition: opacity 0.4s ease-out, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .process .step h4,
+  .process .step p {
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+  }
+
+  /* 5-step stagger — kruhy v sync s pozicí čela linky (0%, 25%, 50%, 75%, 100%) */
+  .process .step:nth-child(1) .step-num { transition-delay: 0.1s; }
+  .process .step:nth-child(2) .step-num { transition-delay: 0.55s; }
+  .process .step:nth-child(3) .step-num { transition-delay: 1.0s; }
+  .process .step:nth-child(4) .step-num { transition-delay: 1.45s; }
+  .process .step:nth-child(5) .step-num { transition-delay: 1.9s; }
+  /* H4 + p mírně po kruhu */
+  .process .step:nth-child(1) h4,
+  .process .step:nth-child(1) p { transition-delay: 0.2s; }
+  .process .step:nth-child(2) h4,
+  .process .step:nth-child(2) p { transition-delay: 0.65s; }
+  .process .step:nth-child(3) h4,
+  .process .step:nth-child(3) p { transition-delay: 1.1s; }
+  .process .step:nth-child(4) h4,
+  .process .step:nth-child(4) p { transition-delay: 1.55s; }
+  .process .step:nth-child(5) h4,
+  .process .step:nth-child(5) p { transition-delay: 2.0s; }
+
+  /* 3-step variant (Děkujeme) — kruhy na pozicích 0%, 50%, 100% */
+  .process.three-step .step:nth-child(2) .step-num { transition-delay: 1.0s; }
+  .process.three-step .step:nth-child(3) .step-num { transition-delay: 1.9s; }
+  .process.three-step .step:nth-child(2) h4,
+  .process.three-step .step:nth-child(2) p { transition-delay: 1.1s; }
+  .process.three-step .step:nth-child(3) h4,
+  .process.three-step .step:nth-child(3) p { transition-delay: 2.0s; }
+
+  /* Triggered state — animace se rozjede */
+  .process.anim-running::before { transform: scaleX(1); }
+  .process.anim-running .step-num { opacity: 1; transform: scale(1); }
+  .process.anim-running .step h4,
+  .process.anim-running .step p { opacity: 1; transform: translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .process::before,
+    .process .step-num,
+    .process .step h4,
+    .process .step p {
+      opacity: 1 !important;
+      transform: none !important;
+      transition: none !important;
+      transition-delay: 0s !important;
+    }
+  }
+
+  .step {
+    padding: 1.5rem 1.25rem;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border: 1.5px solid var(--brand);
+    border-radius: 50%;
+    background: var(--bg);          /* solid bg „přerušuje" spojovací linku za kruhem */
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--brand);
+    line-height: 1;
+    letter-spacing: 0;
+    margin: 0 auto 0.75rem;
+  }
+  .step h4 { font-size: 1rem; margin-bottom: 0.5rem; line-height: 1.3; }
+  .step p { color: var(--text-2); font-size: 0.85rem; line-height: 1.5; }
+
+  /* ============================================================
+     FAKTA — typografická sekce, žádné ikony
+     ============================================================ */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+  .stat {
+    padding: 1rem 1.5rem;
+    border-right: 1px solid var(--line);
+    text-align: left;
+  }
+  .stat:last-child { border-right: none; }
+  .stat-num {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--brand);
+    letter-spacing: -0.03em;
+    margin-bottom: 0.4rem;
+    line-height: 1;
+  }
+  .stat-num small { font-size: 1.6rem; font-weight: 700; }
+  .stat-label-strong { color: var(--ink); font-size: 0.95rem; font-weight: 700; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-label { color: var(--text-2); font-size: 0.85rem; line-height: 1.5; }
+
+  /* ============================================================
+     KONVERZNÍ BLOK
+     ============================================================ */
+  .conv-block {
+    background: var(--bg-2);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+  }
+  .conv-block .container { max-width: 720px; }
+  .conv-block h2 { text-transform: none; font-size: 1.8rem; margin-bottom: 1rem; }
+  .conv-block .subtitle { margin: 0 auto 1.5rem; }
+  .conv-block .conv-meta { color: var(--text-2); font-size: 0.85rem; margin-bottom: 1.75rem; }
+  .conv-block .conv-meta div { margin-bottom: 0.25rem; }
+  .conv-block .secondary-line { margin-top: 1.5rem; color: var(--text-2); font-size: 0.9rem; }
+  .conv-block .secondary-line a { color: var(--brand); text-decoration: none; font-weight: 600; cursor: pointer; }
+
+  /* ============================================================
+     FOOTER
+     ============================================================ */
+  footer {
+    background: var(--ink);
+    color: #cbd5e1;
+    padding: 3.5rem 1.5rem 1.5rem;
+  }
+  .footer-grid {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1.2fr;
+    gap: 2.5rem;
+  }
+  footer h5 { color: white; margin-bottom: 1rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+  footer ul { list-style: none; }
+  footer li { line-height: 2; font-size: 0.9rem; }
+  footer a { color: #cbd5e1; text-decoration: none; cursor: pointer; }
+  footer a:hover { color: white; }
+  .footer-logo { display: block; height: 38px; width: auto; margin-bottom: 0.75rem; }
+  .footer-claim { font-size: 0.88rem; line-height: 1.6; max-width: 280px; color: #94a3b8; }
+  .footer-legal-line { font-size: 0.85rem; line-height: 1.7; color: #94a3b8; }
+  .footer-legal-line strong { color: #e2e8f0; display: block; margin-bottom: 0.25rem; }
+  .footer-bottom {
+    max-width: var(--maxw);
+    margin: 2.5rem auto 0;
+    padding-top: 1.5rem;
+    border-top: 1px solid #334155;
+    font-size: 0.82rem;
+    color: #94a3b8;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .footer-bottom a { color: #94a3b8; text-decoration: none; cursor: pointer; }
+  .footer-bottom a:hover { color: white; }
+  .footer-links-bottom { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+
+  /* ============================================================
+     SUB-PAGE — page hero, breadcrumbs
+     ============================================================ */
+  .page-hero {
+    background: var(--bg-2);
+    padding: 2rem 1.5rem 1.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .page-hero h1 { font-size: 2.2rem; margin-bottom: 1rem; }
+  .page-hero p { color: var(--text-2); max-width: 800px; font-size: 1.05rem; }
+  .breadcrumb { color: var(--text-2); font-size: 0.85rem; margin-bottom: 1.25rem; }
+  .breadcrumb a { color: var(--brand); text-decoration: none; cursor: pointer; }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  /* ============================================================
+     DĚKUJEME — success page
+     ============================================================ */
+  .thank-hero {
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
+    padding: 3rem 1.5rem 2.5rem;
+    text-align: center;
+  }
+  .thank-hero .container { max-width: 720px; }
+  .thank-hero h1 { font-size: 2.2rem; }
+  .thank-hero p.lead { color: var(--text-2); font-size: 1.05rem; margin-top: 1rem; }
+  .success-check {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    background: var(--brand);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.6rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    line-height: 1;
+  }
+  .thank-direct-contact {
+    text-align: center;
+    margin-top: 2rem;
+    color: var(--text-2);
+    font-size: 0.95rem;
+  }
+  .thank-direct-contact a { color: var(--brand); font-weight: 600; text-decoration: none; }
+  .thank-direct-contact a:hover { text-decoration: underline; }
+
+  /* ============================================================
+     SLUŽBY — detailní sekce
+     ============================================================ */
+  .service-detail {
+    padding: 3rem 0;
+    border-top: 1px solid var(--line);
+  }
+  .service-detail:first-child { border-top: none; }
+  .service-detail-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 3rem;
+    align-items: start;
+  }
+  .service-detail h2 { margin-bottom: 1rem; }
+  .service-detail .service-image { width: 100%; height: 280px; object-fit: cover; border-radius: 8px; display: block; }
+  .service-detail ul { list-style: none; margin: 1rem 0; }
+  .service-detail li {
+    padding-left: 1.5rem;
+    position: relative;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .service-detail li::before {
+    content: "✓";
+    color: var(--brand);
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+  }
+  .service-detail .out-block { background: var(--bg-2); padding: 1.25rem; border-radius: 8px; margin-top: 1rem; border-left: 3px solid var(--brand); }
+  .service-detail .out-block strong { color: var(--ink); display: block; margin-bottom: 0.5rem; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .service-detail .micro-cta { margin-top: 1.5rem; padding: 1rem 0; color: var(--text); font-size: 0.95rem; }
+  .service-detail .micro-cta a { color: var(--brand); font-weight: 600; text-decoration: none; cursor: pointer; }
+  .service-detail .micro-cta a:hover { text-decoration: underline; }
+
+  /* ============================================================
+     DETAIL PROJEKTU
+     ============================================================ */
+  .project-detail-hero {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 2.5rem;
+    align-items: stretch;
+  }
+  .project-detail-image {
+    width: 100%;
+    height: 100%;
+    min-height: 320px;
+    object-fit: cover;
+    border-radius: 8px;
+    display: block;
+  }
+  .project-meta-list {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.5rem 1.5rem;
+  }
+  .project-meta-list .meta-row {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 1rem;
+    align-items: baseline;
+  }
+  .project-meta-list .meta-row:last-child { border-bottom: none; }
+  .project-meta-list .meta-label {
+    color: var(--brand);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .project-meta-list .meta-value {
+    color: var(--ink);
+    font-size: 1.05rem;
+    font-weight: 500;
+  }
+  .project-detail-content { max-width: 800px; }
+  .project-detail-content h2 { margin-bottom: 1rem; }
+  .project-detail-content p { color: var(--text); margin-bottom: 1rem; }
+  .project-detail-content ul { list-style: none; margin: 1rem 0 1.5rem; }
+  .project-detail-content li {
+    padding-left: 1.5rem;
+    position: relative;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+  .project-detail-content li::before {
+    content: "✓";
+    color: var(--brand);
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+  }
+
+  /* ============================================================
+     JAK PRACUJEME — detail steps
+     ============================================================ */
+  .step-detail {
+    padding: 1.75rem 0;
+    position: relative;
+  }
+  /* Svislá spojnice mezi kruhy v detailních krocích (Blueprint styl) */
+  .step-detail::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 40px;                      /* střed sloupce 80px */
+    width: 1.5px;
+    background: var(--brand);
+    z-index: 0;
+  }
+  .step-detail:first-of-type::before {
+    top: calc(1.75rem + 40px);      /* první sekce: linka začíná uprostřed kruhu */
+  }
+  .step-detail:last-of-type::before {
+    bottom: auto;
+    height: calc(1.75rem + 40px);   /* poslední sekce: linka končí uprostřed kruhu */
+  }
+  .step-detail-grid {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 2rem;
+    align-items: start;
+    position: relative;
+    z-index: 1;
+  }
+  .step-detail-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    border: 1.5px solid var(--brand);
+    border-radius: 50%;
+    background: var(--bg);            /* solid bg „přerušuje" linku za kruhem */
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--brand);
+    line-height: 1;
+    letter-spacing: 0;
+  }
+  .step-detail h2 { font-size: 1.4rem; text-transform: none; letter-spacing: -0.01em; margin-bottom: 1rem; }
+  /* Odrážky v detailních krocích — vlastní bullet zarovnaný s textem heading
+     (default list-style přesahuje doleva; pseudo-element ::before zarovná na osu). */
+  .step-detail ul {
+    list-style: none;
+    margin: 0.5rem 0 1.25rem;
+    padding-left: 0;
+  }
+  .step-detail li {
+    padding-left: 1.25rem;
+    position: relative;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .step-detail li::before {
+    content: "•";
+    color: var(--brand);
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-weight: 700;
+  }
+
+  /* Page-specific tightening — Jak pracujeme má hodně krátkých sekcí pod sebou */
+  #page-jak-pracujeme section { padding: 1.25rem 1.5rem; }
+  #page-jak-pracujeme .process { margin-top: 1rem; }
+
+  /* ============================================================
+     LEGAL — GDPR, Cookie policy, Podmínky použití
+     ============================================================ */
+  .legal-content { max-width: 760px; margin: 0 auto; }
+  .legal-content p { color: var(--text); margin-bottom: 1rem; line-height: 1.65; }
+  .legal-content h3 { font-size: 1.05rem; color: var(--ink); margin: 1.25rem 0 0.5rem; font-weight: 700; text-transform: none; letter-spacing: 0; }
+  .legal-content ul { list-style: none; margin: 0.5rem 0 1.25rem; padding: 0; }
+  .legal-content li {
+    padding-left: 1.25rem; position: relative;
+    margin-bottom: 0.4rem; color: var(--text); line-height: 1.55;
+  }
+  .legal-content li::before {
+    content: "•"; color: var(--brand);
+    position: absolute; left: 0; font-weight: 700;
+  }
+  .legal-section { padding: 1.5rem 0; border-bottom: 1px solid var(--line); }
+  .legal-section:last-of-type { border-bottom: none; }
+  .legal-section h2 { margin-bottom: 0.75rem; }
+
+  /* Table of Contents */
+  .legal-toc {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--brand);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .legal-toc-title {
+    font-weight: 700; color: var(--ink);
+    margin-bottom: 0.6rem; font-size: 0.8rem;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .legal-toc ol {
+    list-style: none; padding: 0; margin: 0;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0.35rem 1.5rem;
+    counter-reset: toc-counter;
+  }
+  .legal-toc li {
+    font-size: 0.88rem; line-height: 1.4;
+    counter-increment: toc-counter;
+    padding-left: 0; /* override .legal-content li */
+  }
+  .legal-toc li::before {
+    content: counter(toc-counter) ". ";
+    color: var(--brand); font-weight: 600;
+    position: static; margin-right: 0.2rem;
+  }
+  .legal-toc a { color: var(--ink); text-decoration: none; }
+  .legal-toc a:hover { color: var(--brand); text-decoration: underline; }
+
+  /* Highlighted info box (správce, ÚOOÚ) */
+  .controller-box {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--brand);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin: 1rem 0;
+  }
+  .controller-box .name {
+    font-weight: 700; color: var(--ink);
+    font-size: 1.05rem; margin-bottom: 0.5rem;
+  }
+  .controller-box p { margin-bottom: 0.5rem; }
+  .controller-box p:last-child { margin-bottom: 0; }
+  .controller-box a { color: var(--brand); text-decoration: none; }
+  .controller-box a:hover { text-decoration: underline; }
+
+  /* Bottom CTA */
+  .legal-cta {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    margin-top: 2rem;
+  }
+  .legal-cta p { margin: 0; color: var(--text); }
+  .legal-cta a { color: var(--brand); font-weight: 600; text-decoration: none; }
+  .legal-cta a:hover { text-decoration: underline; }
+
+  /* Update date line */
+  .legal-update {
+    margin-top: 1.5rem; padding-top: 0.75rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.85rem; color: var(--text-2); font-style: italic;
+  }
+
+  /* Inline link styling within legal text */
+  .legal-content a:not(.legal-toc a):not(.controller-box a) {
+    color: var(--brand); text-decoration: none;
+  }
+  .legal-content a:hover { text-decoration: underline; }
+
+  /* Tabulka s přehledem cookies (Cookie policy sekce 7) */
+  .legal-table-wrap { overflow-x: auto; margin: 1rem 0; -webkit-overflow-scrolling: touch; }
+  .legal-table {
+    width: 100%; min-width: 720px;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .legal-table th, .legal-table td {
+    padding: 0.6rem 0.85rem;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--line);
+    line-height: 1.45;
+  }
+  .legal-table th {
+    background: var(--bg-2);
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .legal-table tr:last-child td { border-bottom: none; }
+
+  /* Appendix bloky (cookie lišta texty, dev notes) — viditelné v wireframu */
+  .legal-appendix {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--line);
+  }
+  .legal-appendix-label {
+    display: inline-block;
+    background: #fff8dc;
+    border: 1px solid #f0d97a;
+    color: #6b5413;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 1rem;
+  }
+  .legal-appendix h2 { font-size: 1.4rem; text-transform: none; letter-spacing: -0.01em; margin-bottom: 0.75rem; }
+  .legal-appendix h3 { font-size: 1rem; color: var(--ink); margin: 1rem 0 0.5rem; }
+  .legal-appendix-block {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid #d4a04c;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin: 1rem 0 1.75rem;
+  }
+  .legal-appendix-block ol { margin: 0.75rem 0 0 1.25rem; padding: 0; list-style: decimal; }
+  .legal-appendix-block ol li { margin-bottom: 0.75rem; padding-left: 0; }
+  .legal-appendix-block ol li::before { content: none; }
+
+  @media (max-width: 980px) {
+    .legal-toc ol { grid-template-columns: 1fr; }
+  }
+
+  /* ============================================================
+     404 — Stránka nebyla nalezena
+     ============================================================ */
+  .error-hero {
+    padding: 3rem 1.5rem 2rem;
+    text-align: center;
+  }
+  .error-hero .container { max-width: 720px; }
+  .error-visual {
+    position: relative;
+    height: 220px;
+    margin: 0 auto 2rem;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .error-blueprint {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+  }
+  .error-number {
+    position: relative;
+    z-index: 2;
+    font-size: 8rem;
+    font-weight: 900;
+    color: var(--brand);
+    letter-spacing: -0.05em;
+    line-height: 1;
+    font-family: "Inter", -apple-system, sans-serif;
+  }
+  .error-broken-link {
+    margin-top: 1.5rem;
+    color: var(--text-2);
+    font-size: 0.9rem;
+  }
+  .error-broken-link a { color: var(--brand); font-weight: 600; text-decoration: none; }
+  .error-broken-link a:hover { text-decoration: underline; }
+
+  .error-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+  }
+  .error-cards .card { padding: 1.25rem 1.25rem; }
+  .error-cards .card h3 { margin-bottom: 0.4rem; }
+  .error-cards .card p { font-size: 0.88rem; margin-bottom: 0.75rem; }
+
+  /* Wireframe-only utility — odkaz pro otestování 404 stránky */
+  .wireframe-only {
+    opacity: 0.6;
+    font-style: italic;
+  }
+  .wireframe-only::before { content: "🛠 "; }
+
+  @media (max-width: 980px) {
+    .error-number { font-size: 5rem; }
+    .error-visual { height: 160px; }
+    .error-cards { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ============================================================
+     MOBILE STICKY CTA — fixní spodní lišta s CTA „Konzultovat projekt"
+     Word brief: „CTA Konzultovat projekt mělo být sticky (fixní dole),
+     nejen v menu." Zobrazuje se pouze na mobilu.
+     ============================================================ */
+  .mobile-sticky-cta {
+    display: none; /* defaultně skryté; mobile media query níže */
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+    padding: 0.7rem 1rem;
+    z-index: 90;
+    gap: 0.75rem;
+    align-items: center;
+  }
+  .mobile-sticky-cta .btn {
+    flex: 1; justify-content: center;
+  }
+  .mobile-sticky-phone {
+    width: 44px; height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--brand);
+    border-radius: 50%;
+    color: var(--brand);
+    text-decoration: none;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+  .mobile-sticky-cta.hidden { display: none !important; }
+
+  /* ============================================================
+     COOKIE CONSENT BANNER — mockup CMP lišty
+     Per Cookie Policy sekce 8 + Příloha:
+     3 tlačítka stejně viditelná (Přijmout/Odmítnout/Nastavení).
+     ============================================================ */
+  .cookie-banner {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -8px 28px rgba(0,0,0,0.1);
+    padding: 1rem 1.5rem;
+    z-index: 200;
+  }
+  .cookie-banner.hidden { display: none; }
+  .cookie-banner-inner {
+    max-width: var(--maxw); margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1.25rem;
+    align-items: center;
+  }
+  .cookie-banner-text strong {
+    display: block; color: var(--ink);
+    margin-bottom: 0.3rem; font-size: 0.95rem;
+  }
+  .cookie-banner-text p {
+    margin: 0; font-size: 0.85rem;
+    color: var(--text-2); line-height: 1.5;
+  }
+  .cookie-banner-text a { color: var(--brand); cursor: pointer; text-decoration: underline; }
+  .cookie-banner-actions {
+    display: flex; gap: 0.5rem;
+    flex-shrink: 0; align-items: center;
+  }
+  .cookie-banner-actions .btn { white-space: nowrap; }
+
+  @media (max-width: 980px) {
+    .mobile-sticky-cta { display: flex; }
+    body { padding-bottom: 76px; } /* místo pro sticky CTA, aby nepřekrývalo obsah */
+
+    .cookie-banner-inner { grid-template-columns: 1fr; gap: 0.85rem; }
+    .cookie-banner-actions { flex-wrap: wrap; }
+    .cookie-banner-actions .btn { flex: 1 1 auto; min-width: 0; }
+    /* Když je vidět cookie lišta, mobile CTA schováme — překrývaly by se */
+    body.cookie-shown .mobile-sticky-cta { display: none; }
+    body.cookie-shown { padding-bottom: 180px; }
+  }
+
+  /* ============================================================
+     SCROLL-TO-TOP — plovoucí tlačítko nahoru
+     Zobrazuje se po posunutí > 400 px, vlevo od scrollbaru.
+     ============================================================ */
+  .scroll-top {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--bg);
+    color: var(--brand);
+    border: 1.5px solid var(--brand);
+    cursor: pointer;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.15s ease;
+    font-size: 1.1rem;
+    font-weight: 700;
+    z-index: 80;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .scroll-top.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+  .scroll-top:hover {
+    background: var(--brand);
+    color: white;
+    translate: 0 -2px;
+  }
+  @media (max-width: 980px) {
+    .scroll-top { bottom: 92px; right: 16px; } /* nad mobile sticky CTA */
+  }
+
+  /* ============================================================
+     FORM VALIDATION VISUAL STATES — červené orámování + chyba
+     Použité pseudo-třídy: :user-invalid (moderní) + fallback přes
+     :not(:placeholder-shown):invalid (zachytí nevyplněné required po blur).
+     ============================================================ */
+  .form input.invalid,
+  .form textarea.invalid {
+    border-color: #dc2626;
+    background: #fef2f2;
+  }
+  .form input.invalid:focus,
+  .form textarea.invalid:focus {
+    outline-color: #dc2626;
+  }
+  .form-error {
+    display: none;
+    font-size: 0.8rem;
+    color: #dc2626;
+    margin-top: 0.35rem;
+    font-weight: 500;
+  }
+  .form label.has-error .form-error {
+    display: block;
+  }
+
+  /* ============================================================
+     EMPTY STATE — když filtr projektů nematchuje
+     ============================================================ */
+  .empty-state {
+    background: var(--bg-2);
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    color: var(--text-2);
+    font-size: 0.95rem;
+    margin-top: 1rem;
+  }
+  .empty-state.hidden { display: none; }
+  .empty-state strong { color: var(--ink); display: block; margin-bottom: 0.4rem; }
+
+  /* ============================================================
+     PRINT STYLESHEET — pro tisk právních stránek (GDPR, Cookie
+     Policy, Podmínky použití), i celého webu obecně.
+     Skryje nav/footer/CTA/lišty + přidá brand hlavičku + patičku.
+     ============================================================ */
+  .print-only { display: none; }
+
+  @media print {
+    /* Skrýt prvky, které nepatří na tisknutý dokument */
+    nav.nav,
+    footer,
+    .mobile-sticky-cta,
+    .cookie-banner,
+    .scroll-top,
+    .wireframe-only,
+    .legal-toc,
+    .breadcrumb,
+    .legal-appendix,
+    .annotation-bar,
+    .page-hero .breadcrumb,
+    button.btn,
+    .filter-bar,
+    .hero-cta-row,
+    .conv-block,
+    .cta-banner,
+    .legal-cta {
+      display: none !important;
+    }
+
+    /* Zobrazit print-only elementy */
+    .print-only { display: block !important; }
+
+    /* Reset bg a barev pro tisk (úspora inkoustu, lepší kontrast) */
+    html, body {
+      background: white !important;
+      color: #000 !important;
+      font-size: 10.5pt;
+      line-height: 1.5;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    /* Page settings */
+    @page {
+      size: A4;
+      margin: 2cm 1.8cm 2cm 1.8cm;
+      /* Header/footer na každé stránce (Chrome, modern browsers) */
+      @top-left {
+        content: "ProjektGastro.cz";
+        font-family: "Inter", "Helvetica", sans-serif;
+        font-weight: 700;
+        font-size: 9pt;
+        color: #1E2A38;
+      }
+      @top-right {
+        content: "Strana " counter(page) " / " counter(pages);
+        font-family: "Inter", "Helvetica", sans-serif;
+        font-size: 8pt;
+        color: #666;
+      }
+      @bottom-center {
+        content: "© ProjektGastro.cz · Gastronomik KV s.r.o. · IČO 29099528";
+        font-family: "Inter", "Helvetica", sans-serif;
+        font-size: 7.5pt;
+        color: #666;
+      }
+    }
+
+    /* Page hero: zachovat H1, ale bez barevného pozadí */
+    .page-hero {
+      background: white !important;
+      padding: 0 0 0.75cm 0 !important;
+      border-bottom: 1px solid #ccc !important;
+      margin-bottom: 0.75cm;
+    }
+    .page-hero h1 {
+      color: #1E2A38 !important;
+      font-size: 18pt !important;
+      margin-bottom: 0.25cm;
+    }
+    .page-hero p {
+      color: #333 !important;
+      font-size: 10pt;
+    }
+
+    /* Brand zařazení nahoře (1. stránka tištěného dokumentu) */
+    .print-header {
+      display: flex !important;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 0.4cm;
+      margin-bottom: 0.6cm;
+      border-bottom: 2px solid #1E2A38;
+    }
+    .print-header .print-brand {
+      font-weight: 800;
+      font-size: 13pt;
+      color: #1E2A38;
+      letter-spacing: -0.01em;
+    }
+    .print-header .print-brand .accent { color: #2F6DF6; }
+    .print-header .print-brand-sub {
+      font-size: 8pt;
+      color: #555;
+      margin-top: 1mm;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .print-header .print-meta {
+      text-align: right;
+      font-size: 8pt;
+      color: #555;
+      line-height: 1.5;
+    }
+    .print-header .print-meta strong { color: #1E2A38; }
+
+    /* Sekce — neroztrhávat přes stránky kde to jde */
+    .legal-section, .service-detail, .step-detail, article {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    h1, h2, h3, h4 {
+      page-break-after: avoid;
+      break-after: avoid;
+      color: #1E2A38 !important;
+    }
+    h2 { font-size: 13pt !important; margin-top: 0.5cm; }
+    h2.subtle { font-size: 12pt !important; }
+    h3 { font-size: 10.5pt !important; }
+
+    /* Controller box (správce, ÚOOÚ) — zachovat box ale jemný */
+    .controller-box {
+      background: #f8f8f8 !important;
+      border: 1px solid #ccc !important;
+      border-left: 3px solid #1E2A38 !important;
+      padding: 0.4cm !important;
+      page-break-inside: avoid;
+    }
+
+    /* Tabulka cookies — zachovat pro tisk */
+    .legal-table {
+      width: 100% !important;
+      min-width: 0 !important;
+      font-size: 9pt;
+      page-break-inside: avoid;
+    }
+    .legal-table-wrap { overflow: visible !important; }
+
+    /* Odkazy bez podtržení v tisku, externí URLs za textem */
+    a { color: #1E2A38 !important; text-decoration: none; }
+    .legal-content a[href^="http"]::after,
+    .legal-content a[href^="mailto"]::after,
+    .legal-content a[href^="tel"]::after {
+      content: " (" attr(href) ")";
+      font-size: 8pt;
+      color: #666;
+      word-break: break-all;
+    }
+    /* tel: a mailto: jsou OK */
+    .legal-content a[href^="mailto:"]::after { content: ""; }
+    .legal-content a[href^="tel:"]::after { content: ""; }
+
+    /* Container — bez max-width pro tisk */
+    .container { max-width: 100% !important; padding: 0 !important; }
+    section { padding: 0 !important; margin-bottom: 0.5cm; }
+    section.alt { background: white !important; }
+
+    /* Obrázky — comprese pro tisk */
+    img {
+      max-width: 100%;
+      height: auto;
+      page-break-inside: avoid;
+    }
+
+    /* Hero image — nepoužívat na tisku */
+    .hero-image, .service-image, .project-image, .project-detail-image, .error-visual {
+      display: none !important;
+    }
+
+    /* Print pomocná patička na konci dokumentu (1× v dokumentu) */
+    .print-doc-footer {
+      display: block !important;
+      margin-top: 0.8cm;
+      padding-top: 0.4cm;
+      border-top: 1px solid #ccc;
+      font-size: 8pt;
+      color: #666;
+      text-align: center;
+    }
+  }
+
+  /* ============================================================
+     FAQ — accordion
+     ============================================================ */
+  .faq-search {
+    max-width: 640px;
+    margin: 0 auto 2rem;
+    position: relative;
+  }
+  .faq-search input {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 2.5rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 0.95rem;
+    background: var(--bg);
+  }
+  .faq-search-icon { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); color: var(--text-2); }
+
+  .faq-category { margin-bottom: 2.5rem; }
+  .faq-category-title {
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--brand);
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .faq-list { max-width: 800px; margin: 0 auto; }
+  details.faq {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    margin-bottom: 0.6rem;
+    background: var(--bg);
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+  }
+  details.faq summary {
+    padding: 1.1rem 1.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--ink);
+    gap: 1rem;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary::after { content: "+"; color: var(--brand); font-size: 1.5rem; font-weight: 400; flex-shrink: 0; }
+  details.faq[open] summary::after { content: "−"; }
+  details.faq > div { padding: 0 1.5rem 1.5rem; color: var(--text-2); }
+  details.faq > div p { margin-bottom: 0.5rem; }
+
+  /* ============================================================
+     KONTAKT — formulář + info
+     ============================================================ */
+  .contact-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 3rem; }
+  .contact-info { padding-top: 0.5rem; }
+  .contact-info h2 { font-size: 1.4rem; text-transform: none; letter-spacing: -0.01em; margin-bottom: 1.5rem; }
+  .contact-item { margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--line); }
+  .contact-item:last-of-type { border-bottom: none; }
+  .contact-item .label { color: var(--brand); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
+  .contact-item .value { color: var(--ink); font-size: 1rem; line-height: 1.5; }
+  .contact-item .value a { color: var(--ink); text-decoration: none; }
+
+  .form { background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 2rem; }
+  .form h2 { font-size: 1.4rem; text-transform: none; letter-spacing: -0.01em; margin-bottom: 1.5rem; }
+  .form label { display: block; margin-bottom: 1rem; font-size: 0.88rem; color: var(--ink); font-weight: 500; }
+  .form label .req { color: var(--brand); }
+  .form input, .form textarea {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 0.95rem;
+    margin-top: 0.4rem;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .form input:focus, .form textarea:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
+  .form textarea { min-height: 110px; resize: vertical; }
+  .form input[type="file"] { padding: 0.5rem; background: var(--bg); }
+
+  .gdpr-check {
+    display: flex; gap: 0.6rem; align-items: flex-start;
+    margin: 1rem 0 1.5rem;
+    font-size: 0.83rem;
+    color: var(--text-2);
+    line-height: 1.5;
+  }
+  .gdpr-check input { width: auto; margin-top: 3px; flex-shrink: 0; }
+  .gdpr-check a { color: var(--brand); cursor: pointer; }
+  .form-micro { font-size: 0.8rem; color: var(--text-2); margin-top: 1rem; text-align: center; }
+
+  /* ============================================================
+     PROJEKTY INDEX — filter
+     ============================================================ */
+  .filter-bar {
+    display: flex; gap: 0.5rem; margin-bottom: 2.5rem; flex-wrap: wrap;
+  }
+  .filter-bar button {
+    padding: 0.5rem 1.1rem;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text);
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .filter-bar button:hover { border-color: var(--brand); color: var(--brand); }
+  .filter-bar button.active { background: var(--brand); color: white; border-color: var(--brand); }
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+  @media (max-width: 980px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .hero-image { height: 260px; }
+    .hero h1 { font-size: 2rem; }
+    h1 { font-size: 2rem; }
+    h2 { font-size: 1.5rem; }
+    .cards-4 { grid-template-columns: repeat(2, 1fr); }
+    .projects-grid { grid-template-columns: 1fr; }
+    .process,
+    .process.three-step { grid-template-columns: 1fr; }
+    .process::before { display: none; }
+    .step { border-bottom: 1px solid var(--line); }
+    .step:last-child { border-bottom: none; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stat { border-right: none; border-bottom: 1px solid var(--line); padding: 1.5rem; }
+    .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
+    .menu { display: none; }
+    .nav-inner { grid-template-columns: 1fr auto; }
+    .service-detail-grid { grid-template-columns: 1fr; }
+    .project-detail-hero { grid-template-columns: 1fr; }
+    .project-meta-list .meta-row { grid-template-columns: 110px 1fr; }
+    .step-detail::before { display: none; }
+    .step-detail-grid { grid-template-columns: 1fr; gap: 0.5rem; }
+    .step-detail-num { width: 64px; height: 64px; font-size: 1.8rem; }
+    .contact-grid { grid-template-columns: 1fr; }
+    .section-head { flex-direction: column; align-items: flex-start; }
+    .phone span:not(.phone-icon) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Reading progress bar — viditelný pouze na dlouhých právních stránkách -->
+<div class="reading-progress" id="readingProgress" aria-hidden="true"></div>
+
+<!-- ============================================================
+     PRINT HEADER — zobrazí se pouze při tisku (1× na prvním listu).
+     Brand identifikace + datum + URL pro zachování kontextu
+     tištěného dokumentu.
+     ============================================================ -->
+<div class="print-only print-header">
+  <div>
+    <div class="print-brand">PROJEKT<span class="accent">GASTRO</span>.cz</div>
+    <div class="print-brand-sub">Projekční příprava gastronomických provozů</div>
+  </div>
+  <div class="print-meta">
+    <strong>www.projektgastro.cz</strong><br>
+    Vytištěno: <span id="printDate"></span>
+  </div>
+</div>
+
+<!-- ============ NAV ============ -->
+<nav class="nav" id="topnav">
+  <div class="nav-inner">
+    <div class="logo" onclick="showPage('home')">
+      <img class="logo-img" src="projektgastro_logo_white.png" alt="ProjektGastro.cz">
+    </div>
+    <ul class="menu" id="menu">
+      <li><a onclick="showPage('sluzby')" data-page="sluzby">Služby</a></li>
+      <li><a onclick="showPage('projekty')" data-page="projekty">Projekty</a></li>
+      <li><a onclick="showPage('jak-pracujeme')" data-page="jak-pracujeme">Jak pracujeme</a></li>
+      <li><a onclick="showPage('faq')" data-page="faq">FAQ</a></li>
+      <li><a onclick="showPage('kontakt')" data-page="kontakt">Kontakt</a></li>
+    </ul>
+    <div class="nav-actions">
+      <button class="btn btn-primary" onclick="showPage('kontakt')">Konzultovat projekt</button>
+      <a href="tel:+420774637294" class="phone">
+        <span class="phone-icon">☏</span> <span>+420 774 637 294</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============================================================
+     PAGE: HOME
+     ============================================================ -->
+<div class="page active" id="page-home">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <h1>Váš gastro provoz<br>od první skici po stavební<br>povolení – projektová<br>dokumentace na míru.</h1>
+        <div class="hero-bullets">
+          <span>Funkční provozní řešení</span>
+          <span>Provozně efektivní návrh</span>
+          <span>Soulad s legislativou a povolovacími požadavky</span>
+        </div>
+        <div class="hero-cta-row">
+          <button class="btn btn-primary" onclick="showPage('kontakt')">Konzultovat projekt</button>
+          <button class="btn btn-outline" onclick="showPage('projekty')">Prohlédnout projekty</button>
+        </div>
+        <div class="hero-note">
+          <span class="hero-note-icon">⏱</span>
+          <span>Úvodní konzultace (15–20 min) slouží k vyjasnění rozsahu a dalšího postupu. Reagujeme do 24 hodin. Online nebo osobně.</span>
+        </div>
+      </div>
+      <div class="hero-image" role="img" aria-label="Fotografie realizace gastronomického provozu"></div>
+    </div>
+  </section>
+
+  <!-- NAŠE SPECIALIZACE -->
+  <section class="alt">
+    <div class="container">
+      <h2>Naše specializace</h2>
+      <p class="subtitle">Projekční příprava gastronomických provozů. Od koncepčního návrhu a dispozičního řešení technologie až po projektovou dokumentaci a odborný dohled nad realizací.</p>
+      <div class="cards-4">
+        <div class="card" onclick="showPage('sluzby')">
+          <img class="card-icon-img" src="Ikona_Naše%20služby_konzultace%20záměru.png" alt="">
+          <h3>Konzultace záměru</h3>
+          <p>Zjistit přesné potřeby gastro provozu je základ. Zkontrolujeme také podklady a upřesníme, jaký stupeň a rozsah projektu bude zapotřebí. Úvodní konzultace je u nás zdarma.</p>
+          <a class="more">Zjistit více →</a>
+        </div>
+        <div class="card" onclick="showPage('sluzby')">
+          <img class="card-icon-img" src="Ikona_Naše%20služby_projektová%20dokumentace.png" alt="">
+          <h3>Projektová dokumentace</h3>
+          <p>Zpracování projektové dokumentace gastronomických technologií v rozsahu potřebném pro povolovací proces i realizaci stavby.</p>
+          <a class="more">Zjistit více →</a>
+        </div>
+        <div class="card" onclick="showPage('sluzby')">
+          <img class="card-icon-img" src="Ikona_Naše%20služby_odborná%20podpora%20a%20dohled.png" alt="">
+          <h3>Odborná podpora a dohled</h3>
+          <p>Odborná spolupráce při přípravě a realizaci projektu, včetně autorského dozoru a koordinace s dalšími profesemi.</p>
+          <a class="more">Zjistit více →</a>
+        </div>
+        <div class="card" onclick="showPage('sluzby')">
+          <img class="card-icon-img" src="Ikona_Naše%20služby_další%20odborné%20služby.png" alt="">
+          <h3>Další odborné služby</h3>
+          <p>Doplňkové služby související s přípravou a provozem gastronomických zařízení.</p>
+          <a class="more">Zjistit více →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRO KOHO PRACUJEME -->
+  <section>
+    <div class="container">
+      <h2>Pro koho pracujeme</h2>
+      <p class="subtitle">Spolupracujeme s investory, projektanty i veřejnými institucemi při přípravě gastronomických provozů různého rozsahu.</p>
+      <div class="cards-4">
+        <div class="card" onclick="showPage('projekty')">
+          <img class="card-icon-img" src="Ikona_Pro%20koho%20pracujeme_architektonické%20a%20projekční%20kanceláře.png" alt="">
+          <h3>Architektonické a projekční kanceláře</h3>
+          <p>Pomáháme začlenit gastronomickou technologii do projektu tak, aby byla funkční, technicky správná a bezproblémově koordinovaná s ostatními profesemi.</p>
+          <div class="typical">
+            <strong>Typické projekty:</strong>
+            hotely · administrativní budovy · multifunkční objekty
+          </div>
+          <a class="more">Prohlédnout projekty / reference →</a>
+        </div>
+        <div class="card" onclick="showPage('projekty')">
+          <img class="card-icon-img" src="Ikona_Pro%20koho%20pracujeme_majitelé%20a%20provozovatelé%20gastronomických%20provozů.png" alt="">
+          <h3>Majitelé a provozovatelé gastronomických provozů</h3>
+          <p>Navrhujeme provozy tak, aby dávaly smysl z pohledu každodenního fungování — efektivní, kapacitně odpovídající a v souladu s hygienickými požadavky.</p>
+          <div class="typical">
+            <strong>Typické projekty:</strong>
+            restaurace · hotelové kuchyně · kavárny · cateringové provozy
+          </div>
+          <a class="more">Prohlédnout projekty / reference →</a>
+        </div>
+        <div class="card" onclick="showPage('projekty')">
+          <img class="card-icon-img" src="Ikona_Pro%20koho%20pracujeme_veřejný%20sektor.png" alt="">
+          <h3>Veřejný sektor</h3>
+          <p>Zajišťujeme návrhy gastronomických provozů, které splňují legislativní požadavky, kapacitní nároky i kontrolní kritéria veřejných institucí.</p>
+          <div class="typical">
+            <strong>Typické projekty:</strong>
+            školní jídelny · nemocniční stravování · domovy pro seniory
+          </div>
+          <a class="more">Prohlédnout projekty / reference →</a>
+        </div>
+        <div class="card" onclick="showPage('projekty')">
+          <img class="card-icon-img" src="Ikona_Pro%20koho%20pracujeme_developeři%20a%20investiční%20projekty.png" alt="">
+          <h3>Developeři a investiční projekty</h3>
+          <p>Navrhujeme gastronomické provozy jako součást větších projektů tak, aby byly realizovatelné, ekonomicky smysluplné a připravené pro další fáze výstavby.</p>
+          <div class="typical">
+            <strong>Typické projekty:</strong>
+            food courty · retailové projekty · hotelové komplexy
+          </div>
+          <a class="more">Prohlédnout projekty / reference →</a>
+        </div>
+      </div>
+      <p style="text-align: center; margin-top: 2.5rem; color: var(--text); font-size: 1rem;">
+        Pokud si nejste jisti, zda je váš projekt v této oblasti, rádi s vámi záměr nezávazně prodiskutujeme.
+        <button class="btn btn-ghost" onclick="showPage('kontakt')" style="margin-left: 0.5rem;">Kontakt →</button>
+      </p>
+    </div>
+  </section>
+
+  <!-- VYBRANÉ PROJEKTY -->
+  <section class="alt">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>Vybrané projekty / reference</h2>
+          <p class="subtitle" style="margin-bottom: 0;">Ukázka projektů a referencí gastronomických provozů připravovaných pro investory, architekty i veřejné instituce.</p>
+        </div>
+        <a class="right-link" onclick="showPage('projekty')">Zobrazit všechny projekty →</a>
+      </div>
+      <div class="projects-grid">
+        <div class="project-card" onclick="showPage('projekt-imperial')">
+          <img class="project-image" src="Breakfast_Art_Deco_Imperial_Hotel.jpg" alt="Hotelová kuchyně — Hotel Imperial">
+          <div class="project-body">
+            <h4>Hotelová kuchyně — Hotel Imperial</h4>
+            <div class="project-tag">Hotel · Praha</div>
+            <div class="project-meta">800 jídel / den · projektová dokumentace</div>
+            <div class="project-quote">
+              "Projekt byl dobře koordinován s architektonickým návrhem stavby."
+              <div class="project-quote-source">— projektový tým hotelu</div>
+            </div>
+            <a class="more">Detail projektu →</a>
+          </div>
+        </div>
+        <div class="project-card" onclick="showPage('projekty')">
+          <div class="project-image ph">FOTO</div>
+          <div class="project-body">
+            <h4>Školní jídelna — ZŠ Nové Město</h4>
+            <div class="project-tag">Veřejný sektor</div>
+            <div class="project-meta">450 jídel / den · projektová dokumentace</div>
+            <div class="project-quote">
+              "Projektová dokumentace připravena pro veřejnou zakázku."
+              <div class="project-quote-source">— investor projektu</div>
+            </div>
+            <a class="more">Detail projektu →</a>
+          </div>
+        </div>
+        <div class="project-card" onclick="showPage('projekty')">
+          <div class="project-image ph">FOTO</div>
+          <div class="project-body">
+            <h4>Projekt C</h4>
+            <div class="project-tag">Restaurace · komplexní projekt</div>
+            <div class="project-meta">120 míst · realizační projekt</div>
+            <div class="project-quote">
+              "Realizováno ve spolupráci s architektonickým studiem XYZ."
+            </div>
+            <a class="more">Detail projektu →</a>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top: 2rem; color: var(--text); text-align: center;">
+        Zajímá vás podobný projekt?
+        <button class="btn btn-ghost" onclick="showPage('kontakt')" style="margin-left: 0.5rem;">Kontakt →</button>
+      </p>
+    </div>
+  </section>
+
+  <!-- JAK PRACUJEME -->
+  <section>
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>Jak pracujeme</h2>
+          <p class="subtitle" style="margin-bottom: 0;">Postupujeme systematicky — od úvodní analýzy záměru až po odborný dohled nad realizací.</p>
+        </div>
+        <a class="right-link" onclick="showPage('jak-pracujeme')">Podrobně o našem postupu →</a>
+      </div>
+      <div class="process">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h4>Konzultace projektu, analýza záměru</h4>
+          <p>Upřesnění provozního modelu a zadání. Posouzení základních parametrů projektu.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h4>Návrh gastro provozu</h4>
+          <p>Dispoziční návrh technologie.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h4>Koordinace a projednání projektu</h4>
+          <p>Spolupráce s projektovým týmem a projednání s dotčenými profesemi.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <h4>Projektová dokumentace</h4>
+          <p>Dokumentace pro povolení a realizaci.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <h4>Odborný dozor realizace</h4>
+          <p>Kontrola realizace technologie.</p>
+        </div>
+      </div>
+      <p style="margin-top: 2rem; text-align: center; color: var(--text-2); font-size: 0.95rem;">
+        Každý krok má jasně definovaný výstup a odpovědnost.
+      </p>
+    </div>
+  </section>
+
+  <!-- FAKTA O PROJEKTECH -->
+  <section class="alt">
+    <div class="container">
+      <h2>Fakta o projektech</h2>
+      <p class="subtitle">Odbornost a zkušenosti</p>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-num" data-count="20">20<small>+</small></div>
+          <div class="stat-label-strong">LET PRAXE</div>
+          <div class="stat-label">v návrhu gastronomických provozů</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" data-count="150">150<small>+</small></div>
+          <div class="stat-label-strong">PROJEKTŮ</div>
+          <div class="stat-label">projektové dokumentace technologie</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" data-count="100">100<small> %</small></div>
+          <div class="stat-label-strong">PROJEKTŮ</div>
+          <div class="stat-label">úspěšně projednáno s hygienickou stanicí</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" data-count="92">92<small> %</small></div>
+          <div class="stat-label-strong">PROJEKTŮ</div>
+          <div class="stat-label">realizováno v praxi</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KONVERZNÍ BLOK -->
+  <div class="conv-block">
+    <div class="container">
+      <h2>Máte připravovaný projekt gastronomického provozu?</h2>
+      <p class="subtitle">Pomůžeme vám vyhodnotit základní parametry projektu a doporučit další postup jeho přípravy.</p>
+      <div class="conv-meta">
+        <div>Reagujeme do 24 hodin. Konzultace probíhá online nebo osobně.</div>
+        <div>Úvodní konzultace slouží k vyjasnění rozsahu projektu a je nezávazná.</div>
+      </div>
+      <button class="btn btn-primary" onclick="showPage('kontakt')">Konzultovat projekt</button>
+      <div class="secondary-line">
+        Preferujete osobní jednání? <a onclick="showPage('kontakt')">Kontakt →</a><br>
+        Nezávazně vyhodnotíme možnosti vašeho projektu.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     PAGE: SLUŽBY
+     ============================================================ -->
+<div class="page" id="page-sluzby">
+  <div class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a onclick="showPage('home')">Home</a> / Služby</div>
+      <h1>Služby v oblasti projekční přípravy gastronomických provozů</h1>
+      <p>Pomáháme investorům, architektům i veřejným institucím připravit gastronomické provozy od prvotního návrhu až po projektovou dokumentaci a odborný dohled nad realizací. Specializujeme se na projekční část gastronomických provozů — návrh provozního modelu, dispoziční řešení a projektovou dokumentaci potřebnou pro povolovací proces i realizaci stavby.</p>
+      <div style="margin-top: 1.5rem;">
+        <button class="btn btn-primary" onclick="showPage('kontakt')">Konzultovat projekt</button>
+        <span style="margin-left: 1rem; color: var(--text-2); font-size: 0.85rem;">Úvodní konzultace slouží k vyjasnění rozsahu projektu a doporučení dalšího postupu.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Přehled služeb (rychlá navigace) -->
+  <section class="alt">
+    <div class="container">
+      <h2 class="subtle">Rozsah našich služeb</h2>
+      <p class="subtitle">Podílíme se na přípravě gastronomických provozů v různých fázích projektu — od prvotní konzultace a koncepční studie až po projektovou dokumentaci a dohled nad realizací.</p>
+
+      <div class="cards-4">
+        <div class="card" onclick="document.getElementById('konzultace').scrollIntoView({behavior:'smooth'})">
+          <img class="card-icon-img" src="Ikona_Naše%20služby_konzultace%20záměru.png" alt="">
+          <h3>Konzultace záměru</h3>
+          <p>Zjistit přesné potřeby gastro provozu je základ. Zkontrolujeme také podklady a upřesníme, jaký stupeň a rozsah projektu bude zapotřebí. Úvodní konzultace je u nás zdarma.</p>
+          <a class="more">Zjistit více →</a>
+        </div>
+        <div class="card" onclick="document.getElementById('projektova-dokumentace').scrollIntoView({behavior:'smooth'})">
+          <img class="card-icon-img" src="Ikona_Naše%20služby_projektová%20dokumentace.png" alt="">
+          <h3>Projektová dokumentace</h3>
+          <p>Zpracování projektové dokumentace gastronomických technologií v rozsahu potřebném pro povolovací proces i realizaci stavby.</p>
+          <a class="more">Zjistit více →</a>
+        </div>
+        <div class="card" onclick="document.getElementById('odborny-dohled').scrollIntoView({behavior:'smooth'})">
+          <img class="card-icon-img" src="Ikona_Naše%20služby_odborná%20podpora%20a%20dohled.png" alt="">
+          <h3>Odborná podpora a dohled</h3>
+          <p>Odborná spolupráce při přípravě a realizaci projektu, včetně autorského dozoru a koordinace s dalšími profesemi.</p>
+          <a class="more">Zjistit více →</a>
+        </div>
+        <div class="card" onclick="document.getElementById('dalsi-sluzby').scrollIntoView({behavior:'smooth'})">
+          <img class="card-icon-img" src="Ikona_Naše%20služby_další%20odborné%20služby.png" alt="">
+          <h3>Další odborné služby</h3>
+          <p>Doplňkové služby související s přípravou a provozem gastronomických zařízení.</p>
+          <a class="more">Zjistit více →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Detail: Konzultace záměru -->
+  <section>
+    <div class="container">
+      <article class="service-detail" id="konzultace">
+        <div class="service-detail-grid">
+          <div>
+            <div class="eyebrow">01 — Konzultace</div>
+            <h2 class="subtle">Konzultace záměru</h2>
+            <p>V úvodní fázi projektu pomáháme investorům a projektovým týmům ověřit základní parametry připravovaného gastronomického provozu. Posuzujeme, zda zvolený prostor a provozní koncept odpovídají plánovanému rozsahu a technickým požadavkům. Cílem konzultace je vyjasnit zadání projektu a připravit podklady pro další fázi návrhu.</p>
+
+            <h4 style="margin-top: 1.5rem;">Typické činnosti</h4>
+            <ul>
+              <li>posouzení záměru investora</li>
+              <li>analýza vhodnosti prostoru pro gastronomický provoz</li>
+              <li>konzultace s architektem nebo projektantem stavby</li>
+              <li>základní kapacitní a provozní úvahy</li>
+              <li>doporučení dalšího postupu přípravy projektu</li>
+            </ul>
+
+            <div class="out-block">
+              <strong>Výstup</strong>
+              odborné doporučení řešení · definice zadání pro koncepční návrh provozu
+            </div>
+
+            <p class="micro-cta">Máte připravovaný záměr? Rádi s vámi projdeme jeho základní parametry. <a onclick="showPage('kontakt')">Konzultovat projekt →</a></p>
+          </div>
+          <img class="service-image" src="Photo_Naše%20služby_Konzultace%20záměru.jpg" alt="Konzultace záměru — fotografie">
+        </div>
+      </article>
+
+      <article class="service-detail" id="projektova-dokumentace">
+        <div class="service-detail-grid">
+          <div>
+            <div class="eyebrow">02 — Dokumentace</div>
+            <h2 class="subtle">Projektová dokumentace</h2>
+            <p>Zpracováváme projektovou dokumentaci gastronomických technologií v rozsahu potřebném pro povolovací proces i realizaci stavby. Dokumentace je připravena tak, aby byla plně koordinována s ostatními profesemi projektového týmu.</p>
+
+            <h4 style="margin-top: 1.5rem;">Stupně projektové dokumentace</h4>
+            <ul>
+              <li><strong>Studie</strong> — základní návrh technologického řešení a dispozičního uspořádání provozu.</li>
+              <li><strong>Dokumentace pro povolení záměru</strong> — projektová dokumentace potřebná pro povolovací proces a vyjádření dotčených orgánů.</li>
+              <li><strong>Dokumentace pro provedení stavby</strong> — detailní technické řešení technologie pro realizaci projektu.</li>
+              <li><strong>Dokumentace skutečného provedení</strong> — zpracování dokumentace skutečného stavu po dokončení realizace.</li>
+            </ul>
+
+            <h4 style="margin-top: 1.5rem;">Dokumentace může zahrnovat</h4>
+            <ul>
+              <li>technologické výkresy</li>
+              <li>specifikaci zařízení</li>
+              <li>napojovací body technologií</li>
+              <li>podklady pro elektro, ZTI a vzduchotechniku</li>
+            </ul>
+
+            <p class="micro-cta">Nejste si jisti, jaký stupeň dokumentace váš projekt vyžaduje? <a onclick="showPage('jak-pracujeme')">Více o projektové dokumentaci →</a></p>
+          </div>
+          <img class="service-image" src="Photo_Naše%20služby_Projektová%20dokumentace.jpg" alt="Projektová dokumentace — fotografie">
+        </div>
+      </article>
+
+      <article class="service-detail" id="odborny-dohled">
+        <div class="service-detail-grid">
+          <div>
+            <div class="eyebrow">03 — Dohled</div>
+            <h2 class="subtle">Odborná podpora a dohled</h2>
+            <p>Během realizace projektu poskytujeme odbornou podporu investorům i realizačním firmám, aby byla technologie provedena v souladu s projektovou dokumentací a navrženým provozním řešením.</p>
+
+            <h4 style="margin-top: 1.5rem;">Typické činnosti</h4>
+            <ul>
+              <li>autorský dozor projektanta</li>
+              <li>technické konzultace během realizace</li>
+              <li>kontrola souladu realizace s projektem</li>
+              <li>spolupráce s realizačními firmami</li>
+              <li>řešení technických změn v průběhu stavby</li>
+            </ul>
+
+            <div class="out-block">
+              <strong>Výstup</strong>
+              odborný dohled nad realizací · zajištění souladu realizace s projektem
+            </div>
+
+            <p class="micro-cta">Potřebujete konzultaci během realizace projektu? <a onclick="showPage('kontakt')">Kontakt →</a></p>
+          </div>
+          <img class="service-image" src="Photo_Naše%20služby_Odborná%20podpora%20a%20dohled.jpg" alt="Odborná podpora a dohled — fotografie">
+        </div>
+      </article>
+
+      <article class="service-detail" id="dalsi-sluzby">
+        <div class="service-detail-grid">
+          <div>
+            <div class="eyebrow">04 — Doplňkové</div>
+            <h2 class="subtle">Další odborné služby</h2>
+            <p>Vedle projekční činnosti poskytujeme také další odborné služby související s přípravou a provozem gastronomických zařízení.</p>
+
+            <h4 style="margin-top: 1.5rem;">Typické činnosti</h4>
+            <ul>
+              <li>zaměření prostor pro návrh technologie</li>
+              <li>návrh systémů HACCP</li>
+              <li>provozní poradenství</li>
+              <li>školení technologie pro provozní personál</li>
+              <li>spolupráce s architekty a projektanty dalších profesí</li>
+            </ul>
+
+            <p class="micro-cta">Tyto služby často navazují na projektovou dokumentaci. <a onclick="document.getElementById('projektova-dokumentace').scrollIntoView({behavior:'smooth'})">Projektová dokumentace →</a></p>
+          </div>
+          <img class="service-image" src="Photo_Naše%20služby_Další%20odborné%20služby.jpg" alt="Další odborné služby — fotografie">
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- CTA blok -->
+  <div class="conv-block">
+    <div class="container">
+      <h2>Máte záměr v oblasti gastronomického provozu?</h2>
+      <p class="subtitle">Rádi s vámi projdeme základní parametry projektu a doporučíme další postup přípravy.</p>
+      <button class="btn btn-primary" onclick="showPage('kontakt')">Konzultovat projekt</button>
+      <div class="conv-meta" style="margin-top: 1.5rem;">Reagujeme do 24 hodin. Konzultace probíhá online nebo osobně.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: PROJEKTY
+     ============================================================ -->
+<div class="page" id="page-projekty">
+  <div class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a onclick="showPage('home')">Home</a> / Projekty</div>
+      <h1>Vybrané projekty gastronomických provozů</h1>
+      <p>Projekční příprava gastronomických provozů — od návrhu provozu po projektovou dokumentaci a odborný dohled realizace.</p>
+    </div>
+  </div>
+
+  <section>
+    <div class="container">
+      <div class="filter-bar" id="projektyFilters">
+        <button class="active" data-filter="all" onclick="filterProjects('all')">Všechny projekty</button>
+        <button data-filter="hotely-restaurace" onclick="filterProjects('hotely-restaurace')">Hotely / Restaurace</button>
+        <button data-filter="verejne" onclick="filterProjects('verejne')">Veřejné stravování</button>
+        <button data-filter="developerske" onclick="filterProjects('developerske')">Developerské projekty</button>
+      </div>
+
+      <div class="projects-grid" id="projektyGrid">
+        <div class="project-card" data-category="hotely-restaurace" onclick="showPage('projekt-imperial')">
+          <img class="project-image" src="Breakfast_Art_Deco_Imperial_Hotel.jpg" alt="Hotelová kuchyně — Hotel Imperial">
+          <div class="project-body">
+            <h4>Hotelová kuchyně — Hotel Imperial</h4>
+            <div class="project-tag">Hotel · Praha</div>
+            <div class="project-meta">800 jídel / den · projektová dokumentace</div>
+          </div>
+        </div>
+        <div class="project-card" data-category="verejne" onclick="showPage('projekt-imperial')">
+          <div class="project-image ph">FOTO</div>
+          <div class="project-body">
+            <h4>Školní jídelna — ZŠ Nové Město</h4>
+            <div class="project-tag">Veřejný sektor</div>
+            <div class="project-meta">450 jídel / den · projektová dokumentace</div>
+          </div>
+        </div>
+        <div class="project-card" data-category="hotely-restaurace" onclick="showPage('projekt-imperial')">
+          <div class="project-image ph">FOTO</div>
+          <div class="project-body">
+            <h4>Projekt C</h4>
+            <div class="project-tag">Restaurace</div>
+            <div class="project-meta">120 míst · realizační projekt</div>
+          </div>
+        </div>
+        <div class="project-card" data-category="verejne" onclick="showPage('projekt-imperial')">
+          <div class="project-image ph">FOTO</div>
+          <div class="project-body">
+            <h4>Domov seniorů — Brno</h4>
+            <div class="project-tag">Veřejné stravování</div>
+            <div class="project-meta">300 jídel / den · projektová dokumentace</div>
+          </div>
+        </div>
+        <div class="project-card" data-category="developerske" onclick="showPage('projekt-imperial')">
+          <div class="project-image ph">FOTO</div>
+          <div class="project-body">
+            <h4>Food court — OC Centrum</h4>
+            <div class="project-tag">Developerský projekt</div>
+            <div class="project-meta">8 provozů · komplexní projekt</div>
+          </div>
+        </div>
+        <div class="project-card" data-category="hotely-restaurace" onclick="showPage('projekt-imperial')">
+          <div class="project-image ph">FOTO</div>
+          <div class="project-body">
+            <h4>Bistro Nordic</h4>
+            <div class="project-tag">Restaurace · Praha</div>
+            <div class="project-meta">80 míst · realizační projekt</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty state — zobrazí se, když žádný projekt nematchuje filtr -->
+      <div class="empty-state hidden" id="projektyEmpty">
+        <strong>Pro zvolený filtr zatím nejsou žádné projekty.</strong>
+        Zkuste vybrat jinou kategorii nebo se vraťte na <a onclick="filterProjects('all')" style="color: var(--brand); cursor: pointer; font-weight: 600;">přehled všech projektů</a>.
+      </div>
+
+      <div style="text-align: center; margin-top: 3rem;">
+        <button class="btn btn-outline">Načíst další projekty</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="conv-block">
+    <div class="container">
+      <h2>Zajímá vás podobný projekt?</h2>
+      <p class="subtitle">Kontaktujte nás. Nezávazně vyhodnotíme možnosti vašeho projektu.</p>
+      <button class="btn btn-primary" onclick="showPage('kontakt')">Konzultovat projekt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: JAK PRACUJEME
+     ============================================================ -->
+<div class="page" id="page-jak-pracujeme">
+  <div class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a onclick="showPage('home')">Home</a> / Jak pracujeme</div>
+      <h1>Jak probíhá příprava projektu gastronomického provozu</h1>
+      <p>Příprava projektu gastronomického provozu probíhá v několika navazujících fázích — od úvodní analýzy záměru až po odborný dohled nad realizací technologie. Každá fáze má jasně definovaný rozsah, výstupy i odpovědnost.</p>
+      <div style="margin-top: 1.5rem;">
+        <button class="btn btn-primary" onclick="showPage('kontakt')">Konzultovat projekt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lineární diagram -->
+  <section class="alt">
+    <div class="container">
+      <h2 class="subtle">Přehled procesu</h2>
+      <p class="subtitle">Každý krok navazuje na předchozí fázi a má jasně definovaný výstup.</p>
+      <div class="process">
+        <div class="step" onclick="document.getElementById('konzultace-analyza').scrollIntoView({behavior:'smooth'})" style="cursor: pointer;">
+          <div class="step-num">1</div>
+          <h4>Konzultace projektu, analýza záměru</h4>
+          <p>Upřesnění provozního modelu a posouzení parametrů.</p>
+        </div>
+        <div class="step" onclick="document.getElementById('navrh-provozu').scrollIntoView({behavior:'smooth'})" style="cursor: pointer;">
+          <div class="step-num">2</div>
+          <h4>Návrh gastro provozu</h4>
+          <p>Dispoziční návrh technologie.</p>
+        </div>
+        <div class="step" onclick="document.getElementById('koordinace').scrollIntoView({behavior:'smooth'})" style="cursor: pointer;">
+          <div class="step-num">3</div>
+          <h4>Koordinace a projednání projektu</h4>
+          <p>Spolupráce s týmem a profesemi.</p>
+        </div>
+        <div class="step" onclick="document.getElementById('jp-projektova-dokumentace').scrollIntoView({behavior:'smooth'})" style="cursor: pointer;">
+          <div class="step-num">4</div>
+          <h4>Projektová dokumentace</h4>
+          <p>Dokumentace pro povolení a realizaci.</p>
+        </div>
+        <div class="step" onclick="document.getElementById('odborny-dozor').scrollIntoView({behavior:'smooth'})" style="cursor: pointer;">
+          <div class="step-num">5</div>
+          <h4>Odborný dozor realizace</h4>
+          <p>Kontrola realizace technologie.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Detail steps -->
+  <section>
+    <div class="container">
+      <article class="step-detail" id="konzultace-analyza">
+        <div class="step-detail-grid">
+          <div class="step-detail-num">1</div>
+          <div>
+            <h2 class="subtle">Konzultace projektu a analýza záměru</h2>
+            <p>V úvodní fázi projektu pomáháme vyjasnit základní parametry připravovaného gastronomického provozu a posoudit vhodnost prostoru i zvoleného řešení.</p>
+            <h4 style="margin-top: 1.25rem;">Typické činnosti</h4>
+            <ul>
+              <li>posouzení záměru investora</li>
+              <li>analýza vhodnosti prostoru pro gastronomický provoz</li>
+              <li>základní kapacitní a provozní úvahy</li>
+              <li>konzultace s architektem nebo projektovým týmem</li>
+            </ul>
+            <div class="out-block">
+              <strong>Výstup</strong>
+              vyjasnění rozsahu projektu · doporučení dalšího postupu přípravy
+            </div>
+            <p class="micro-cta">Máte připravovaný záměr? Rádi s vámi projdeme jeho základní parametry. <a onclick="showPage('kontakt')">Konzultovat projekt →</a></p>
+          </div>
+        </div>
+      </article>
+
+      <article class="step-detail" id="navrh-provozu">
+        <div class="step-detail-grid">
+          <div class="step-detail-num">2</div>
+          <div>
+            <h2 class="subtle">Návrh gastro provozu</h2>
+            <p>Na základě vstupních parametrů navrhujeme dispoziční řešení technologie a provozní vazby tak, aby byl provoz funkční, efektivní a odpovídal hygienickým požadavkům.</p>
+            <h4 style="margin-top: 1.25rem;">Typické činnosti</h4>
+            <ul>
+              <li>dispoziční návrh technologie</li>
+              <li>návrh technologických celků</li>
+              <li>řešení provozních toků</li>
+              <li>návrh hygienických vazeb</li>
+            </ul>
+            <div class="out-block">
+              <strong>Výstup</strong>
+              koncepční návrh provozu · podklady pro projektovou dokumentaci
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="step-detail" id="koordinace">
+        <div class="step-detail-grid">
+          <div class="step-detail-num">3</div>
+          <div>
+            <h2 class="subtle">Koordinace a projednání projektu</h2>
+            <p>Projekt gastronomické technologie koordinujeme s architektonickým návrhem a dalšími profesemi tak, aby bylo řešení plně integrováno do celkového projektu stavby.</p>
+            <h4 style="margin-top: 1.25rem;">Typické činnosti</h4>
+            <ul>
+              <li>spolupráce s architektem a generálním projektantem</li>
+              <li>koordinace s profesemi (elektro, ZTI, VZT)</li>
+              <li>projednání řešení s dotčenými stranami</li>
+              <li>zapracování připomínek</li>
+            </ul>
+            <div class="out-block">
+              <strong>Výstup</strong>
+              koordinovaný návrh připravený pro zpracování dokumentace
+            </div>
+            <p class="micro-cta">Podrobněji o našich službách. <a onclick="showPage('sluzby')">Služby →</a></p>
+          </div>
+        </div>
+      </article>
+
+      <article class="step-detail" id="jp-projektova-dokumentace">
+        <div class="step-detail-grid">
+          <div class="step-detail-num">4</div>
+          <div>
+            <h2 class="subtle">Projektová dokumentace</h2>
+            <p>Zpracováváme projektovou dokumentaci gastronomických technologií v rozsahu potřebném pro povolovací proces i realizaci stavby.</p>
+            <h4 style="margin-top: 1.25rem;">Typické činnosti</h4>
+            <ul>
+              <li>zpracování jednotlivých stupňů dokumentace</li>
+              <li>návrh technologických výkresů</li>
+              <li>specifikace zařízení</li>
+              <li>definice napojovacích bodů</li>
+            </ul>
+            <h4 style="margin-top: 1.25rem;">Stupně dokumentace</h4>
+            <ul>
+              <li>studie</li>
+              <li>dokumentace pro povolení záměru</li>
+              <li>dokumentace pro provedení stavby</li>
+              <li>dokumentace skutečného provedení</li>
+            </ul>
+            <div class="out-block">
+              <strong>Výstup</strong>
+              kompletní projektová dokumentace technologie
+            </div>
+            <p class="micro-cta">Rozsah projektové dokumentace. <a onclick="showPage('sluzby')">Služby — Projektová dokumentace →</a></p>
+          </div>
+        </div>
+      </article>
+
+      <article class="step-detail" id="odborny-dozor">
+        <div class="step-detail-grid">
+          <div class="step-detail-num">5</div>
+          <div>
+            <h2 class="subtle">Odborný dozor realizace</h2>
+            <p>V průběhu realizace projektu zajišťujeme odborný dohled, aby byla technologie provedena v souladu s projektovou dokumentací a navrženým řešením.</p>
+            <h4 style="margin-top: 1.25rem;">Typické činnosti</h4>
+            <ul>
+              <li>autorský dozor projektanta</li>
+              <li>technické konzultace během realizace</li>
+              <li>kontrola souladu realizace s projektem</li>
+              <li>řešení změn v průběhu stavby</li>
+            </ul>
+            <div class="out-block">
+              <strong>Výstup</strong>
+              realizace technologie v souladu s projektem
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="container" style="max-width: 800px; text-align: center;">
+      <h2 class="subtle">Spolupráce s projektovým týmem</h2>
+      <p class="subtitle" style="margin: 0 auto 2rem;">Navrhovaná řešení vždy koordinujeme s architektem a ostatními profesemi tak, aby byl projekt technicky proveditelný a bezproblémově realizovatelný.</p>
+      <button class="btn btn-outline" onclick="showPage('sluzby')">Všechny služby</button>
+    </div>
+  </section>
+
+  <div class="conv-block">
+    <div class="container">
+      <h2>Máte připravovaný projekt gastronomického provozu?</h2>
+      <button class="btn btn-primary" onclick="showPage('kontakt')" style="margin-top: 1rem;">Konzultovat projekt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: FAQ
+     ============================================================ -->
+<div class="page" id="page-faq">
+  <div class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a onclick="showPage('home')">Home</a> / FAQ</div>
+      <h1>Nejčastější otázky k přípravě projektu gastronomického provozu</h1>
+      <p>Níže najdete odpovědi na nejčastější otázky týkající se přípravy projektu gastronomických provozů, rozsahu projektové dokumentace a průběhu spolupráce.</p>
+    </div>
+  </div>
+
+  <section>
+    <div class="container">
+
+      <div class="faq-search">
+        <span class="faq-search-icon">🔍</span>
+        <input type="text" id="faq-search-input" placeholder="Hledat v otázkách…" oninput="filterFaq(this.value)">
+      </div>
+
+      <div class="faq-list">
+
+        <div class="faq-category">
+          <div class="faq-category-title">Projekt a dokumentace</div>
+          <details class="faq" open>
+            <summary>Jaký je rozdíl mezi koncepční studií a projektovou dokumentací?</summary>
+            <div><p>Koncepční studie řeší návrh provozu a dispoziční uspořádání technologie. Projektová dokumentace na tento návrh navazuje a obsahuje detailní technické řešení potřebné pro povolení stavby a realizaci projektu.</p></div>
+          </details>
+          <details class="faq">
+            <summary>Je projekt gastronomické technologie součástí stavebního projektu?</summary>
+            <div><p>Ano. Projekt gastronomické technologie je obvykle jednou z odborných částí stavebního projektu a je koordinován s architektonickým návrhem a dalšími profesemi.</p></div>
+          </details>
+          <details class="faq">
+            <summary>Jaké stupně projektové dokumentace zpracováváte?</summary>
+            <div>
+              <p>Projekt může zahrnovat například: koncepční studii / dokumentaci pro povolení záměru / dokumentaci pro provedení stavby / dokumentaci skutečného provedení.</p>
+              <p style="margin-top: 0.75rem;"><a onclick="showPage('sluzby')" style="color: var(--brand); cursor: pointer; font-weight: 600;">Projektová dokumentace →</a></p>
+            </div>
+          </details>
+        </div>
+
+        <div class="faq-category">
+          <div class="faq-category-title">Spolupráce</div>
+          <details class="faq">
+            <summary>V jaké fázi projektu je vhodné vás oslovit?</summary>
+            <div><p>Ideálně již ve fázi přípravy projektu nebo při návrhu dispozice prostoru. Včasná spolupráce umožňuje optimalizovat provozní řešení a předejít pozdějším změnám projektu.</p></div>
+          </details>
+          <details class="faq">
+            <summary>Spolupracujete s architekty?</summary>
+            <div><p>Ano. Projekt gastronomické technologie je obvykle součástí širšího stavebního projektu a spolupracujeme proto s architekty a generálními projektanty.</p></div>
+          </details>
+          <details class="faq">
+            <summary>Dodáváte také gastronomické technologie?</summary>
+            <div><p>Ne. Specializujeme se na projekční přípravu gastronomických provozů. Dodávku technologického vybavení zajišťují specializovaní dodavatelé.</p></div>
+          </details>
+        </div>
+
+        <div class="faq-category">
+          <div class="faq-category-title">Realizace projektu</div>
+          <details class="faq">
+            <summary>Poskytujete také autorský dozor během realizace?</summary>
+            <div><p>Ano. V případě potřeby poskytujeme odborný dohled nad realizací technologie, aby byla provedena v souladu s projektovou dokumentací.</p></div>
+          </details>
+          <details class="faq">
+            <summary>Jak dlouho trvá příprava projektu gastronomického provozu?</summary>
+            <div><p>Doba přípravy závisí na rozsahu projektu a fázi, ve které je projekt zpracováván. U menších provozů může jít o několik týdnů, u větších projektů o delší období.</p></div>
+          </details>
+        </div>
+      </div>
+
+      <div style="text-align: center; max-width: 720px; margin: 3rem auto 0; padding: 2rem; background: var(--bg-2); border-radius: 8px; border: 1px solid var(--line);">
+        <h3 class="normal" style="text-transform: none;">Nenašli jste odpověď na svou otázku?</h3>
+        <p style="color: var(--text-2); margin: 1rem 0 1.5rem;">Každý projekt gastronomického provozu je specifický. Rádi s vámi projdeme základní parametry projektu a doporučíme další postup jeho přípravy.</p>
+        <button class="btn btn-primary" onclick="showPage('kontakt')">Konzultovat projekt</button>
+        <p style="font-size: 0.85rem; color: var(--text-2); margin-top: 0.75rem;">Reagujeme do 1 pracovního dne.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================================
+     PAGE: KONTAKT
+     ============================================================ -->
+<div class="page" id="page-kontakt">
+  <div class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a onclick="showPage('home')">Home</a> / Kontakt</div>
+      <h1>Kontakt</h1>
+      <p>Máte připravovaný projekt gastronomického provozu? Rádi s vámi projdeme základní parametry projektu a doporučíme další postup jeho přípravy.</p>
+    </div>
+  </div>
+
+  <section>
+    <div class="container">
+      <div class="contact-grid">
+
+        <!--
+          KONTAKTNÍ FORMULÁŘ — produkční nasazení:
+          - submitContactForm() v JS je wireframe-only, jen přepíná stránku
+          - Produkce: POST na server endpoint, validace na backendu,
+            anti-spam (reCAPTCHA v3 / honeypot), uložení do DB/CRM,
+            e-mail notifikace, redirect na /kontakt/dekujeme
+          - JS validace zde slouží pouze pro UX (instant feedback),
+            NIKDY ne jako jediná ochrana — vždy validovat i na serveru
+          - Klientská inline error pole používají [data-error] atributy
+        -->
+        <form class="form" id="contactForm" novalidate onsubmit="return submitContactForm(event);">
+          <h2>Kontaktní formulář</h2>
+
+          <label>
+            Jméno <span class="req">*</span>
+            <input type="text" name="jmeno" required placeholder="Jan Novák" data-error="Zadejte prosím vaše jméno.">
+            <span class="form-error"></span>
+          </label>
+          <label>
+            E-mail <span class="req">*</span>
+            <input type="email" name="email" required placeholder="vas@email.cz" data-error="Zadejte prosím platnou e-mailovou adresu.">
+            <span class="form-error"></span>
+          </label>
+          <label>
+            Telefon (volitelné)
+            <input type="tel" name="telefon" placeholder="+420 ..." pattern="[\+\d\s]*" data-error="Telefon smí obsahovat pouze číslice a mezery.">
+            <span class="form-error"></span>
+          </label>
+          <label>
+            Vaše zpráva (volitelné)
+            <textarea name="zprava" placeholder="Typ provozu, přibližná plocha, fáze projektu..."></textarea>
+            <span class="form-error"></span>
+          </label>
+          <label>
+            Připojit soubory (volitelné)
+            <input type="file" name="soubory" multiple>
+          </label>
+
+          <div class="gdpr-check">
+            <input type="checkbox" id="gdpr" name="gdpr" required data-error="Pro pokračování je potřeba souhlas se zpracováním osobních údajů.">
+            <label for="gdpr" style="margin: 0; font-weight: 400;">
+              Souhlasím se zpracováním osobních údajů za účelem vyřízení mé zprávy a seznámil/a jsem se s <a>podmínkami ochrany osobních údajů</a>.
+            </label>
+          </div>
+          <span class="form-error" id="gdpr-error" style="margin-top: -0.5rem; margin-bottom: 0.75rem;"></span>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.9rem;">Odeslat zprávu</button>
+          <p class="form-micro">Reagujeme do 1 pracovního dne.</p>
+          <p class="form-micro" style="margin-top: 0.5rem;"><a style="color: var(--brand); cursor: pointer;">Jak zpracováváme a chráníme osobní údaje v souladu s GDPR →</a></p>
+        </form>
+
+        <div class="contact-info">
+          <h2>Přímý kontakt</h2>
+
+          <div class="contact-item">
+            <div class="label">Telefon</div>
+            <div class="value"><a href="tel:+420774637294">+420 774 637 294</a></div>
+          </div>
+          <div class="contact-item">
+            <div class="label">E-mail</div>
+            <div class="value"><a href="mailto:info@projektgastro.cz">info@projektgastro.cz</a></div>
+          </div>
+          <div class="contact-item">
+            <div class="label">Sídlo společnosti</div>
+            <div class="value">Gastronomik KV s.r.o.<br>Masarykova 528<br>357 34 Nové Sedlo</div>
+          </div>
+          <div class="contact-item">
+            <div class="label">Web</div>
+            <div class="value">ProjektGastro.cz</div>
+          </div>
+          <div class="contact-item">
+            <div class="label">LinkedIn</div>
+            <div class="value"><a href="https://www.linkedin.com/company/gastronomik-kv/" target="_blank" rel="noopener">Profil na LinkedIn →</a></div>
+          </div>
+          <div class="contact-item">
+            <div class="label">Provozní doba</div>
+            <div class="value">Po–Pá · 9:00–17:00</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 4rem; max-width: 800px; padding: 2rem; background: var(--bg-2); border-radius: 8px; border-left: 3px solid var(--brand);">
+        <h3 class="normal" style="text-transform: none;">Jak probíhá první konzultace</h3>
+        <p style="color: var(--text); margin-top: 0.75rem;">Úvodní konzultace slouží k vyjasnění základních parametrů projektu, zejména typu plánovaného provozu a orientačního rozsahu, a k doporučení dalšího postupu. Obvykle trvá přibližně 15–20 minut a může proběhnout online nebo osobně.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================================
+     PAGE: DETAIL PROJEKTU — Hotel Imperial Praha
+     URL: /projekty/hotel-imperial-praha
+     SEO Title: Hotelová kuchyně — Hotel Imperial Praha | ProjektGastro
+
+     POZNÁMKA PRO PROGRAMÁTORA:
+     Tato stránka je ŠABLONA pro detail projektu. V wireframu existuje
+     jedna konkrétní instance (Hotel Imperial). Pro produkční nasazení
+     je třeba:
+       1. Vytvořit unikátní detail stránku pro každý projekt v portfoliu
+          podle stejné struktury: breadcrumb, hero (H1 + krátký popis),
+          meta-blok (Typ/Lokalita/Kapacita/Rozsah), foto, sekce „Zadání
+          a řešení" s odrážkami, sekce „Výsledek", sekce „Další projekty",
+          závěrečný konverzní blok.
+       2. URL pattern: /projekty/<slug-projektu>
+          (např. /projekty/zs-nove-mesto, /projekty/domov-senioru-brno)
+       3. Aktualizovat onclick handlery na všech .project-card elementech:
+          aktuálně 5 karet na /projekty + 2 karty na /home volá
+          showPage('projekt-imperial') jako placeholder — vyměnit za
+          unikátní cílový slug každého projektu.
+       4. Doplnit BreadcrumbList JSON-LD: Home → Projekty → Název projektu.
+     ============================================================ -->
+<div class="page" id="page-projekt-imperial">
+  <div class="page-hero">
+    <div class="container">
+      <div class="breadcrumb">
+        <a onclick="showPage('home')">Home</a> /
+        <a onclick="showPage('projekty')">Projekty</a> /
+        Hotelová kuchyně — Hotel Imperial Praha
+      </div>
+      <h1>Hotelová kuchyně — Hotel Imperial Praha</h1>
+      <p>Modernizace gastronomického provozu v rámci rekonstrukce hotelu.</p>
+    </div>
+  </div>
+
+  <section>
+    <div class="container">
+      <div class="project-detail-hero">
+        <div class="project-meta-list">
+          <div class="meta-row">
+            <div class="meta-label">Typ</div>
+            <div class="meta-value">Hotel</div>
+          </div>
+          <div class="meta-row">
+            <div class="meta-label">Lokalita</div>
+            <div class="meta-value">Praha</div>
+          </div>
+          <div class="meta-row">
+            <div class="meta-label">Kapacita</div>
+            <div class="meta-value">800 jídel / den</div>
+          </div>
+          <div class="meta-row">
+            <div class="meta-label">Rozsah</div>
+            <div class="meta-value">Projektová dokumentace</div>
+          </div>
+        </div>
+        <img class="project-detail-image" src="Breakfast_Art_Deco_Imperial_Hotel.jpg" alt="Hotelová kuchyně — Hotel Imperial Praha">
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="container">
+      <div class="project-detail-content">
+        <h2 class="subtle">Zadání a řešení</h2>
+        <p>Investor připravoval rekonstrukci provozu. Navrhli jsme dispoziční řešení kuchyně a zpracovali projektovou dokumentaci technologie.</p>
+        <ul>
+          <li>návrh provozních vazeb</li>
+          <li>optimalizace toků</li>
+          <li>návrh technologie</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="project-detail-content">
+        <h2 class="subtle">Výsledek</h2>
+        <p>Kompletní projektová dokumentace připravená pro realizaci a koordinovaná s ostatními profesemi.</p>
+        <p style="color: var(--text-2); font-size: 0.9rem; margin-top: 1.25rem;">Doplníme fotografie / výkresy realizace, jakmile budou k dispozici.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DALŠÍ PROJEKTY -->
+  <section class="alt">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Další projekty</h2></div>
+        <a class="right-link" onclick="showPage('projekty')">Všechny projekty →</a>
+      </div>
+      <div class="projects-grid">
+        <div class="project-card" onclick="showPage('projekty')">
+          <div class="project-image ph">FOTO</div>
+          <div class="project-body">
+            <h4>Školní jídelna — ZŠ Nové Město</h4>
+            <div class="project-tag">Veřejný sektor</div>
+            <div class="project-meta">450 jídel / den · 2022</div>
+          </div>
+        </div>
+        <div class="project-card" onclick="showPage('projekty')">
+          <div class="project-image ph">FOTO</div>
+          <div class="project-body">
+            <h4>Restaurace Eska</h4>
+            <div class="project-tag">Gastronomický provoz</div>
+            <div class="project-meta">120 míst · 2021</div>
+          </div>
+        </div>
+        <div class="project-card" onclick="showPage('projekty')">
+          <div class="project-image ph">FOTO</div>
+          <div class="project-body">
+            <h4>Domov seniorů — Brno</h4>
+            <div class="project-tag">Veřejné stravování</div>
+            <div class="project-meta">300 jídel / den · 2023</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="conv-block">
+    <div class="container">
+      <h2>Máte podobný projekt?</h2>
+      <p class="subtitle">Rádi s vámi projdeme základní parametry vašeho gastronomického provozu.</p>
+      <button class="btn btn-primary" onclick="showPage('kontakt')">Konzultovat projekt</button>
+      <div class="conv-meta" style="margin-top: 1.5rem;">Reagujeme do 24 hodin. Konzultace probíhá online nebo osobně.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PAGE: DĚKUJEME (/kontakt/dekujeme)
+     URL: /kontakt/dekujeme · noindex · GA4 lead_form_submission
+     ============================================================ -->
+<div class="page" id="page-dekujeme">
+
+  <!-- HERO — potvrzení odeslání -->
+  <section class="thank-hero">
+    <div class="container">
+      <div class="success-check" aria-hidden="true">✓</div>
+      <h1>Vaše zpráva byla úspěšně odeslána.</h1>
+      <p class="lead">Děkujeme za důvěru. Nyní se budeme vašemu záměru věnovat.</p>
+    </div>
+  </section>
+
+  <!-- CO SE BUDE DÍT DÁL — 3 kroky v Blueprint stylu -->
+  <section>
+    <div class="container">
+      <h2>Co se bude dít dál</h2>
+      <p class="subtitle">Tři jednoduché kroky, než se s vámi spojíme.</p>
+      <div class="process three-step">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h4>Ozveme se vám do 1 pracovního dne</h4>
+          <p>Na uvedený e-mail nebo telefonní číslo.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h4>Domluvíme úvodní konzultaci</h4>
+          <p>15–20 minut, online nebo osobně.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h4>Projdeme parametry projektu</h4>
+          <p>Doporučíme další postup přípravy.</p>
+        </div>
+      </div>
+      <p class="thank-direct-contact">
+        Pokud byste nás potřeboval/a dříve, ozvěte se přímo na
+        <a href="tel:+420774637294">+420 774 637 294</a>
+        nebo
+        <a href="mailto:info@projektgastro.cz">info@projektgastro.cz</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ROZCESTNÍK — Než se spojíme -->
+  <section class="alt">
+    <div class="container">
+      <h2>Než se spojíme, můžete si prohlédnout</h2>
+      <p class="subtitle">Pár míst, kam se mezitím podívat.</p>
+      <div class="cards-4" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="card" onclick="showPage('projekty')">
+          <h3>Naše vybrané projekty</h3>
+          <p>Ukázka realizovaných gastronomických provozů — hotelové kuchyně, nemocniční stravování, restaurace.</p>
+          <a class="more">Prohlédnout →</a>
+        </div>
+        <div class="card" onclick="showPage('jak-pracujeme')">
+          <h3>Jak probíhá příprava projektu</h3>
+          <p>Pět kroků od úvodní analýzy záměru po odborný dohled nad realizací.</p>
+          <a class="more">Zjistit více →</a>
+        </div>
+        <div class="card" onclick="showPage('faq')">
+          <h3>Často kladené otázky</h3>
+          <p>Odpovědi na nejčastější dotazy ke stupňům dokumentace, spolupráci a průběhu projektu.</p>
+          <a class="more">Otevřít FAQ →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================================
+     PAGE: OCHRANA OSOBNÍCH ÚDAJŮ (GDPR)
+     URL: /ochrana-osobnich-udaju
+     SEO Title: Ochrana osobních údajů | ProjektGastro.cz
+     Meta description: Informace o tom, jak ProjektGastro.cz zpracovává
+        osobní údaje návštěvníků webu, zájemců o konzultaci a osob,
+        které nás kontaktují.
+     ============================================================ -->
+<div class="page" id="page-ochrana-osobnich-udaju">
+  <div class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a onclick="showPage('home')">Home</a> / Ochrana osobních údajů</div>
+      <h1>Ochrana osobních údajů</h1>
+      <p>Vaše soukromí je pro nás důležité. Na této stránce najdete informace o tom, jak zpracováváme osobní údaje návštěvníků webu ProjektGastro.cz, osob, které nás kontaktují prostřednictvím kontaktního formuláře, e-mailu nebo telefonu, a osob, se kterými jednáme o přípravě projektu gastronomického provozu.</p>
+    </div>
+  </div>
+
+  <section>
+    <div class="container">
+      <div class="legal-content">
+
+        <p>Osobní údaje zpracováváme pouze v rozsahu nezbytném pro komunikaci, vyřízení poptávky, přípravu nabídky, plnění smluvních a zákonných povinností, ochranu našich oprávněných zájmů a provoz webových stránek.</p>
+
+        <!-- TABLE OF CONTENTS -->
+        <div class="legal-toc">
+          <div class="legal-toc-title">Obsah</div>
+          <ol>
+            <li><a href="#legal-1">Správce osobních údajů</a></li>
+            <li><a href="#legal-2">Jaké osobní údaje zpracováváme</a></li>
+            <li><a href="#legal-3">Za jakým účelem osobní údaje zpracováváme</a></li>
+            <li><a href="#legal-4">Právní základ zpracování</a></li>
+            <li><a href="#legal-5">Kontaktní formulář a přiložené soubory</a></li>
+            <li><a href="#legal-6">Ukládání údajů v e-mailu, databázi a CRM</a></li>
+            <li><a href="#legal-7">Doba uchování osobních údajů</a></li>
+            <li><a href="#legal-8">Kdo může mít k osobním údajům přístup</a></li>
+            <li><a href="#legal-9">Předávání osobních údajů mimo Evropskou unii</a></li>
+            <li><a href="#legal-10">Cookies a analytika</a></li>
+            <li><a href="#legal-11">Vaše práva</a></li>
+            <li><a href="#legal-12">Jak můžete svá práva uplatnit</a></li>
+            <li><a href="#legal-13">Zabezpečení osobních údajů</a></li>
+            <li><a href="#legal-14">Změny těchto zásad</a></li>
+          </ol>
+        </div>
+
+        <!-- 1 -->
+        <article class="legal-section" id="legal-1">
+          <h2 class="subtle">1. Správce osobních údajů</h2>
+          <p>Správcem osobních údajů je:</p>
+          <div class="controller-box">
+            <div class="name">Gastronomik KV s.r.o.</div>
+            <p>Masarykova 528<br>357 34 Nové Sedlo<br>Česká republika</p>
+            <p>IČO: 29099528 · DIČ: CZ29099528</p>
+            <p>Společnost je zapsána v obchodním rejstříku vedeném u Krajského soudu v Plzni, oddíl C, vložka 24689.</p>
+            <p style="margin-top: 0.75rem;"><strong>Kontaktní údaje:</strong><br>
+              E-mail: <a href="mailto:info@projektgastro.cz">info@projektgastro.cz</a><br>
+              Telefon: <a href="tel:+420774637294">+420 774 637 294</a><br>
+              Web: <a href="https://www.projektgastro.cz">www.projektgastro.cz</a>
+            </p>
+          </div>
+          <p>Správce nejmenoval pověřence pro ochranu osobních údajů. Ve věcech ochrany osobních údajů nás můžete kontaktovat prostřednictvím výše uvedeného e-mailu.</p>
+        </article>
+
+        <!-- 2 -->
+        <article class="legal-section" id="legal-2">
+          <h2 class="subtle">2. Jaké osobní údaje zpracováváme</h2>
+          <p>Zpracováváme zejména osobní údaje, které nám sami poskytnete při kontaktování společnosti nebo při jednání o projektu.</p>
+          <p>Může jít zejména o:</p>
+          <ul>
+            <li>jméno a příjmení,</li>
+            <li>e-mailovou adresu,</li>
+            <li>telefonní číslo,</li>
+            <li>obsah vaší zprávy,</li>
+            <li>informace o připravovaném projektu,</li>
+            <li>údaje uvedené v přiložených souborech,</li>
+            <li>údaje potřebné pro přípravu nabídky nebo smluvní dokumentace,</li>
+            <li>údaje související s obchodní komunikací,</li>
+            <li>technické údaje související s návštěvou webu,</li>
+            <li>údaje získané prostřednictvím analytických a marketingových nástrojů, pokud k tomu existuje odpovídající právní základ.</li>
+          </ul>
+        </article>
+
+        <!-- 3 -->
+        <article class="legal-section" id="legal-3">
+          <h2 class="subtle">3. Za jakým účelem osobní údaje zpracováváme</h2>
+          <p>Osobní údaje zpracováváme zejména za následujícími účely.</p>
+
+          <h3>Vyřízení vaší zprávy nebo poptávky</h3>
+          <p>Pokud nás kontaktujete prostřednictvím kontaktního formuláře, e-mailu nebo telefonu, zpracováváme vaše údaje za účelem odpovědi na vaši zprávu, vyjasnění základních parametrů projektu a doporučení dalšího postupu.</p>
+
+          <h3>Příprava nabídky a jednání o spolupráci</h3>
+          <p>Pokud máte zájem o konzultaci, projektovou dokumentaci, odborný dohled nebo jinou službu, zpracováváme údaje potřebné pro přípravu nabídky, komunikaci o rozsahu projektu a případné uzavření smlouvy.</p>
+
+          <h3>Plnění smlouvy</h3>
+          <p>Pokud mezi námi vznikne smluvní vztah, zpracováváme osobní údaje v rozsahu nezbytném pro plnění smlouvy, vedení projektové komunikace, přípravu dokumentace, fakturaci a související administrativu.</p>
+
+          <h3>Plnění zákonných povinností</h3>
+          <p>Některé údaje zpracováváme proto, abychom splnili zákonné povinnosti, zejména v oblasti účetnictví, daní a archivace účetních a daňových dokladů.</p>
+
+          <h3>Ochrana oprávněných zájmů</h3>
+          <p>Osobní údaje můžeme zpracovávat také za účelem ochrany našich právních nároků, evidence obchodní komunikace, správy zákaznických vztahů a zajištění bezpečnosti webu a souvisejících systémů.</p>
+
+          <h3>Provoz, měření a zlepšování webu</h3>
+          <p>Web může využívat analytické a marketingové nástroje, zejména Google Analytics 4, Google Tag Manager, Sklik a případně další obdobné nástroje. Tyto nástroje mohou pomáhat s měřením návštěvnosti, vyhodnocováním účinnosti webu a marketingových kampaní a zlepšováním obsahu webu.</p>
+
+          <p>Podrobnosti o používání cookies a obdobných technologií jsou uvedeny v samostatném dokumentu <a onclick="showPage('zasady-pouzivani-cookies')" style="cursor: pointer;">Zásady používání cookies</a>.</p>
+        </article>
+
+        <!-- 4 -->
+        <article class="legal-section" id="legal-4">
+          <h2 class="subtle">4. Právní základ zpracování</h2>
+          <p>Osobní údaje zpracováváme pouze tehdy, pokud pro to máme odpovídající právní důvod.</p>
+          <p>Používané právní základy:</p>
+          <ul>
+            <li><strong>jednání o smlouvě nebo plnění smlouvy</strong> — pokud nás kontaktujete s poptávkou, jednáme o nabídce nebo plníme uzavřenou smlouvu,</li>
+            <li><strong>plnění právní povinnosti</strong> — zejména účetní, daňové a archivační povinnosti,</li>
+            <li><strong>oprávněný zájem</strong> — zejména běžná obchodní komunikace, evidence poptávek, správa zákaznických vztahů, ochrana právních nároků a základní bezpečnost webu,</li>
+            <li><strong>souhlas</strong> — zejména u analytických nebo marketingových cookies a obdobných technologií, pokud je souhlas podle právních předpisů vyžadován.</li>
+          </ul>
+        </article>
+
+        <!-- 5 -->
+        <article class="legal-section" id="legal-5">
+          <h2 class="subtle">5. Kontaktní formulář a přiložené soubory</h2>
+          <p>Při odeslání kontaktního formuláře zpracováváme údaje, které do formuláře uvedete. Údaje z formuláře mohou být doručeny e-mailem a zároveň uloženy v databázi nebo CRM systému, který používáme pro evidenci a vyřízení poptávek.</p>
+          <p>Pokud k formuláři připojíte soubory, mohou tyto soubory obsahovat další osobní údaje nebo informace související s připravovaným projektem. Přiložené soubory mohou být technicky uloženy na serveru, v e-mailové schránce, v CRM systému nebo v cloudovém úložišti.</p>
+          <p>Přiložené soubory používáme výhradně za účelem posouzení vaší poptávky, přípravy odpovědi, konzultace, nabídky nebo následné spolupráce.</p>
+          <p>Doporučujeme, abyste prostřednictvím formuláře neposílali citlivé osobní údaje ani údaje třetích osob, pokud to není nezbytné pro posouzení vašeho požadavku.</p>
+        </article>
+
+        <!-- 6 -->
+        <article class="legal-section" id="legal-6">
+          <h2 class="subtle">6. Ukládání údajů v e-mailu, databázi a CRM</h2>
+          <p>Údaje z kontaktního formuláře a následné komunikace mohou být zpracovávány v těchto systémech:</p>
+          <ul>
+            <li>e-mailová schránka,</li>
+            <li>databáze webu nebo formulářového nástroje,</li>
+            <li>CRM systém nebo obdobný systém pro evidenci poptávek,</li>
+            <li>cloudové úložiště, pokud je potřeba uchovávat přiložené soubory nebo projektové podklady.</li>
+          </ul>
+          <p>E-mailové a související služby jsou provozovány prostřednictvím služeb Google. Pokud jsou používány další technické služby, mohou se na zpracování podílet také jejich poskytovatelé v rozsahu nezbytném pro provoz webu, komunikaci a evidenci poptávek.</p>
+        </article>
+
+        <!-- 7 -->
+        <article class="legal-section" id="legal-7">
+          <h2 class="subtle">7. Doba uchování osobních údajů</h2>
+          <p>Osobní údaje uchováváme pouze po dobu nezbytnou pro účely, pro které byly získány.</p>
+          <p>Obecně platí:</p>
+          <ul>
+            <li>údaje z kontaktního formuláře uchováváme po dobu potřebnou k vyřízení dotazu nebo poptávky,</li>
+            <li>pokud z komunikace vznikne obchodní spolupráce, uchováváme údaje po dobu trvání smluvního vztahu a následně po dobu vyžadovanou právními předpisy,</li>
+            <li>účetní a daňové doklady uchováváme po dobu stanovenou příslušnými právními předpisy,</li>
+            <li>údaje potřebné k ochraně právních nároků můžeme uchovávat po dobu trvání příslušných promlčecích lhůt.</li>
+          </ul>
+          <p>Pokud z poptávky nevznikne smluvní spolupráce, uchováváme údaje z nezrealizovaných poptávek zpravidla po dobu nejdéle 24 měsíců od poslední komunikace, pokud neexistuje jiný zákonný nebo oprávněný důvod pro delší uchování.</p>
+          <p>Tato lhůta odpovídá povaze projektové a stavební přípravy, kdy se záměry gastronomických provozů často vracejí s odstupem několika měsíců, mění se rozsah projektu, investor nebo fáze přípravy.</p>
+        </article>
+
+        <!-- 8 -->
+        <article class="legal-section" id="legal-8">
+          <h2 class="subtle">8. Kdo může mít k osobním údajům přístup</h2>
+          <p>K osobním údajům mohou mít přístup pouze osoby, které je potřebují pro splnění výše uvedených účelů.</p>
+          <p>Může jít zejména o:</p>
+          <ul>
+            <li>zaměstnance a spolupracovníky správce,</li>
+            <li>poskytovatele webhostingu,</li>
+            <li>poskytovatele e-mailových a cloudových služeb,</li>
+            <li>poskytovatele CRM nebo formulářových nástrojů,</li>
+            <li>dodavatele IT služeb,</li>
+            <li>poskytovatele analytických a marketingových nástrojů,</li>
+            <li>účetní nebo daňové poradce,</li>
+            <li>právní poradce,</li>
+            <li>odborné partnery zapojené do přípravy nebo realizace projektu, pokud je to nezbytné.</li>
+          </ul>
+          <p>S osobami, které pro nás osobní údaje zpracovávají, uzavíráme odpovídající smluvní vztahy a požadujeme, aby osobní údaje chránily v souladu s právními předpisy.</p>
+        </article>
+
+        <!-- 9 -->
+        <article class="legal-section" id="legal-9">
+          <h2 class="subtle">9. Předávání osobních údajů mimo Evropskou unii</h2>
+          <p>Někteří poskytovatelé technologických, analytických, marketingových nebo cloudových služeb mohou zpracovávat osobní údaje také mimo Evropskou unii nebo Evropský hospodářský prostor.</p>
+          <p>Pokud k takovému předání dochází, probíhá pouze za podmínek stanovených právními předpisy, zejména na základě odpovídajících záruk podle GDPR.</p>
+          <p>Tato část je důležitá zejména s ohledem na používání služeb Google, analytických nástrojů, marketingových nástrojů a případného CRM systému.</p>
+        </article>
+
+        <!-- 10 -->
+        <article class="legal-section" id="legal-10">
+          <h2 class="subtle">10. Cookies a analytika</h2>
+          <p>Web ProjektGastro.cz může používat cookies a obdobné technologie. Tyto technologie mohou sloužit zejména k:</p>
+          <ul>
+            <li>zajištění správného fungování webu,</li>
+            <li>měření návštěvnosti,</li>
+            <li>analýze chování návštěvníků,</li>
+            <li>vyhodnocování účinnosti marketingových kampaní,</li>
+            <li>zlepšování obsahu a uživatelské zkušenosti.</li>
+          </ul>
+          <p>Web může využívat zejména nástroje Google Analytics 4, Google Tag Manager, Sklik a další obdobné analytické nebo marketingové nástroje.</p>
+          <p>Podrobné informace o používání cookies, jednotlivých kategoriích cookies, době jejich uchování a možnostech nastavení souhlasu jsou uvedeny v samostatném dokumentu: <a onclick="showPage('zasady-pouzivani-cookies')" style="cursor: pointer;">Zásady používání cookies</a>.</p>
+        </article>
+
+        <!-- 11 -->
+        <article class="legal-section" id="legal-11">
+          <h2 class="subtle">11. Vaše práva</h2>
+          <p>V souvislosti se zpracováním osobních údajů máte zejména tato práva:</p>
+          <ul>
+            <li>právo na informace o zpracování osobních údajů,</li>
+            <li>právo na přístup k osobním údajům,</li>
+            <li>právo na opravu nepřesných nebo neúplných údajů,</li>
+            <li>právo na výmaz osobních údajů, pokud jsou splněny zákonné podmínky,</li>
+            <li>právo na omezení zpracování,</li>
+            <li>právo vznést námitku proti zpracování,</li>
+            <li>právo na přenositelnost údajů, pokud je relevantní,</li>
+            <li>právo odvolat souhlas, pokud je zpracování založeno na souhlasu,</li>
+            <li>právo podat stížnost u dozorového úřadu.</li>
+          </ul>
+          <p>Dozorovým úřadem je:</p>
+          <div class="controller-box">
+            <div class="name">Úřad pro ochranu osobních údajů</div>
+            <p>Pplk. Sochora 27<br>170 00 Praha 7</p>
+            <p>Web: <a href="https://www.uoou.cz">www.uoou.cz</a></p>
+          </div>
+        </article>
+
+        <!-- 12 -->
+        <article class="legal-section" id="legal-12">
+          <h2 class="subtle">12. Jak můžete svá práva uplatnit</h2>
+          <p>Svá práva můžete uplatnit prostřednictvím e-mailu:</p>
+          <p><a href="mailto:info@projektgastro.cz" style="font-weight: 600;">info@projektgastro.cz</a></p>
+          <p>Do předmětu zprávy můžete uvést například: <em>Žádost podle GDPR</em>.</p>
+          <p>Na žádost odpovíme bez zbytečného odkladu, zpravidla nejpozději do jednoho měsíce od jejího obdržení. V případě složitějších žádostí může být lhůta prodloužena v souladu s právními předpisy.</p>
+        </article>
+
+        <!-- 13 -->
+        <article class="legal-section" id="legal-13">
+          <h2 class="subtle">13. Zabezpečení osobních údajů</h2>
+          <p>Přijímáme přiměřená technická a organizační opatření k ochraně osobních údajů před neoprávněným přístupem, ztrátou, zneužitím nebo neoprávněnou změnou.</p>
+          <p>Přístup k osobním údajům mají pouze osoby, které jej potřebují pro výkon své práce nebo pro poskytování služeb souvisejících s provozem webu, komunikací se zákazníky, evidencí poptávek nebo plněním smluvních a zákonných povinností.</p>
+        </article>
+
+        <!-- 14 -->
+        <article class="legal-section" id="legal-14">
+          <h2 class="subtle">14. Změny těchto zásad</h2>
+          <p>Tyto zásady můžeme čas od času aktualizovat, zejména pokud dojde ke změně právních předpisů, způsobu zpracování osobních údajů nebo používaných technologií na webu.</p>
+          <p>Aktuální verze zásad je vždy dostupná na této stránce.</p>
+          <p class="legal-update">Datum poslední aktualizace: 8. května 2026</p>
+        </article>
+
+        <!-- Bottom CTA -->
+        <div class="legal-cta">
+          <p>Máte dotaz k ochraně osobních údajů? Napište nám na <a href="mailto:info@projektgastro.cz">info@projektgastro.cz</a>.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================================
+     PAGE: ZÁSADY POUŽÍVÁNÍ COOKIES (Cookie policy)
+     URL: /zasady-pouzivani-cookies
+     SEO Title: Cookie policy | ProjektGastro.cz
+     Meta description: Informace o používání cookies a obdobných
+        technologií na webu ProjektGastro.cz, včetně analytických
+        a marketingových nástrojů.
+     ============================================================ -->
+<div class="page" id="page-zasady-pouzivani-cookies">
+  <div class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a onclick="showPage('home')">Home</a> / Zásady používání cookies</div>
+      <h1>Cookie policy</h1>
+      <p>Tato Cookie policy vysvětluje, jak web ProjektGastro.cz používá cookies a obdobné technologie. Najdete zde informace o tom, jaké typy cookies můžeme používat, k jakým účelům slouží, jak můžete nastavit své preference a jak můžete svůj souhlas změnit nebo odvolat.</p>
+    </div>
+  </div>
+
+  <section>
+    <div class="container">
+      <div class="legal-content">
+
+        <p>Provozovatelem webu je:</p>
+        <div class="controller-box">
+          <div class="name">Gastronomik KV s.r.o.</div>
+          <p>Masarykova 528<br>357 34 Nové Sedlo<br>Česká republika</p>
+          <p>IČO: 29099528 · DIČ: CZ29099528</p>
+          <p>Společnost je zapsána v obchodním rejstříku vedeném u Krajského soudu v Plzni, oddíl C, vložka 24689.</p>
+          <p style="margin-top: 0.75rem;"><strong>Kontaktní údaje:</strong><br>
+            E-mail: <a href="mailto:info@projektgastro.cz">info@projektgastro.cz</a><br>
+            Telefon: <a href="tel:+420774637294">+420 774 637 294</a><br>
+            Web: <a href="https://www.projektgastro.cz">www.projektgastro.cz</a>
+          </p>
+        </div>
+
+        <!-- TABLE OF CONTENTS -->
+        <div class="legal-toc">
+          <div class="legal-toc-title">Obsah</div>
+          <ol>
+            <li><a href="#cp-1">Co jsou cookies</a></li>
+            <li><a href="#cp-2">Jaké typy cookies používáme</a></li>
+            <li><a href="#cp-3">Nezbytné cookies</a></li>
+            <li><a href="#cp-4">Analytické cookies</a></li>
+            <li><a href="#cp-5">Marketingové cookies</a></li>
+            <li><a href="#cp-6">Funkční a preferenční cookies</a></li>
+            <li><a href="#cp-7">Přehled používaných cookies</a></li>
+            <li><a href="#cp-8">Souhlas s používáním cookies</a></li>
+            <li><a href="#cp-9">Jak můžete změnit nebo odvolat souhlas</a></li>
+            <li><a href="#cp-10">Nastavení cookies v prohlížeči</a></li>
+            <li><a href="#cp-11">Zpracování osobních údajů v souvislosti s cookies</a></li>
+            <li><a href="#cp-12">Předávání údajů třetím stranám</a></li>
+            <li><a href="#cp-13">Změny Cookie policy</a></li>
+          </ol>
+        </div>
+
+        <!-- 1 -->
+        <article class="legal-section" id="cp-1">
+          <h2 class="subtle">1. Co jsou cookies</h2>
+          <p>Cookies jsou malé textové soubory, které se ukládají do vašeho zařízení při návštěvě webové stránky. Umožňují webu například správně fungovat, zapamatovat si některá nastavení, měřit návštěvnost nebo vyhodnocovat účinnost marketingových kampaní.</p>
+          <p>Vedle cookies mohou být používány také obdobné technologie, například měřicí pixely, značky, tagy nebo identifikátory uložené v prohlížeči.</p>
+        </article>
+
+        <!-- 2 -->
+        <article class="legal-section" id="cp-2">
+          <h2 class="subtle">2. Jaké typy cookies používáme</h2>
+          <p>Na webu ProjektGastro.cz můžeme používat následující kategorie cookies.</p>
+        </article>
+
+        <!-- 3 -->
+        <article class="legal-section" id="cp-3">
+          <h2 class="subtle">3. Nezbytné cookies</h2>
+          <p>Nezbytné cookies jsou nutné pro správné fungování webu. Umožňují například základní technické zajištění webu, bezpečnost, zapamatování nastavení cookie lišty nebo správné fungování formulářů.</p>
+          <p>Tyto cookies můžeme používat bez vašeho souhlasu, protože jsou nezbytné pro fungování webu.</p>
+          <p>ÚOOÚ uvádí, že pokud web používá pouze technické cookies, není nutné zavádět cookie lištu, ale informační povinnost vůči návštěvníkům zůstává zachována.</p>
+          <p><strong>Příklady účelů nezbytných cookies:</strong></p>
+          <ul>
+            <li>zajištění základního fungování webu,</li>
+            <li>bezpečnost webu,</li>
+            <li>odeslání formuláře,</li>
+            <li>uložení informace o vašem nastavení cookies,</li>
+            <li>prevence technických chyb.</li>
+          </ul>
+        </article>
+
+        <!-- 4 -->
+        <article class="legal-section" id="cp-4">
+          <h2 class="subtle">4. Analytické cookies</h2>
+          <p>Analytické cookies nám pomáhají porozumět tomu, jak návštěvníci web používají. Díky nim můžeme sledovat například návštěvnost, zdroje návštěv, oblíbenost jednotlivých stránek nebo základní chování uživatelů na webu.</p>
+          <p>Web může používat zejména:</p>
+          <ul>
+            <li><strong>Google Analytics 4</strong></li>
+            <li><strong>Google Tag Manager</strong></li>
+            <li>případně další analytické nástroje</li>
+          </ul>
+          <p>Google uvádí, že JavaScriptové tagy Google Analytics 4 používají first-party cookies k rozlišení jedinečných uživatelů a relací.</p>
+          <p>Analytické cookies používáme pouze na základě vašeho souhlasu, pokud právní předpisy takový souhlas vyžadují.</p>
+          <p><strong>Příklady účelů analytických cookies:</strong></p>
+          <ul>
+            <li>měření návštěvnosti webu,</li>
+            <li>analýza zdrojů návštěvnosti,</li>
+            <li>vyhodnocení, které stránky jsou nejnavštěvovanější,</li>
+            <li>zlepšování obsahu a struktury webu,</li>
+            <li>technické vyhodnocení výkonu webu.</li>
+          </ul>
+        </article>
+
+        <!-- 5 -->
+        <article class="legal-section" id="cp-5">
+          <h2 class="subtle">5. Marketingové cookies</h2>
+          <p>Marketingové cookies a obdobné technologie slouží k vyhodnocování a zlepšování marketingových kampaní, měření konverzí a případně k zobrazování relevantnější reklamy.</p>
+          <p>Web může používat zejména:</p>
+          <ul>
+            <li><strong>Sklik / Seznam.cz měřicí nebo retargetingové skripty</strong></li>
+            <li>případně další marketingové nebo reklamní nástroje</li>
+          </ul>
+          <p>Sklik ve své nápovědě uvádí, že pro využití retargetingu, dynamického retargetingu nebo Lookalike cílení je potřeba mít na webu vložený měřicí skript s retargetingovým kódem.</p>
+          <p>Marketingové cookies používáme pouze na základě vašeho souhlasu.</p>
+          <p><strong>Příklady účelů marketingových cookies:</strong></p>
+          <ul>
+            <li>měření konverzí,</li>
+            <li>vyhodnocování účinnosti reklamních kampaní,</li>
+            <li>retargeting,</li>
+            <li>vytváření reklamních publik,</li>
+            <li>zobrazování relevantnější reklamy.</li>
+          </ul>
+        </article>
+
+        <!-- 6 -->
+        <article class="legal-section" id="cp-6">
+          <h2 class="subtle">6. Funkční a preferenční cookies</h2>
+          <p>Funkční nebo preferenční cookies mohou pomáhat s uložením některých uživatelských nastavení, například jazykové volby, předvoleb zobrazení nebo jiných nastavení, která zlepšují pohodlí při používání webu.</p>
+          <p>Pokud tyto cookies nejsou nezbytné pro fungování webu, používáme je pouze na základě vašeho souhlasu.</p>
+        </article>
+
+        <!-- 7 -->
+        <article class="legal-section" id="cp-7">
+          <h2 class="subtle">7. Přehled používaných cookies</h2>
+          <p>Konkrétní seznam cookies se může měnit podle aktuálně nasazených technických, analytických a marketingových nástrojů. Doporučujeme, aby byl níže uvedený přehled po technickém nasazení webu doplněn podle skutečného cookie scanu.</p>
+          <div class="legal-table-wrap">
+            <table class="legal-table">
+              <thead>
+                <tr>
+                  <th>Kategorie</th>
+                  <th>Nástroj / poskytovatel</th>
+                  <th>Účel</th>
+                  <th>Právní základ</th>
+                  <th>Doba uchování</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Nezbytné</td>
+                  <td>Web / cookie lišta</td>
+                  <td>Základní fungování webu a uložení nastavení cookies</td>
+                  <td>oprávněný zájem / nezbytnost pro fungování webu</td>
+                  <td>dle nastavení nástroje</td>
+                </tr>
+                <tr>
+                  <td>Analytické</td>
+                  <td>Google Analytics 4</td>
+                  <td>Měření návštěvnosti a chování uživatelů na webu</td>
+                  <td>souhlas</td>
+                  <td>dle nastavení GA4</td>
+                </tr>
+                <tr>
+                  <td>Analytické / technické řízení tagů</td>
+                  <td>Google Tag Manager</td>
+                  <td>Správa měřicích a marketingových tagů</td>
+                  <td>podle typu spouštěného tagu</td>
+                  <td>dle nastavení jednotlivých tagů</td>
+                </tr>
+                <tr>
+                  <td>Marketingové</td>
+                  <td>Sklik / Seznam.cz</td>
+                  <td>Měření konverzí, vyhodnocování kampaní, případně retargeting</td>
+                  <td>souhlas</td>
+                  <td>dle nastavení nástroje</td>
+                </tr>
+                <tr>
+                  <td>Marketingové / reklamní</td>
+                  <td>další reklamní systémy, pokud budou nasazeny</td>
+                  <td>měření a optimalizace marketingových kampaní</td>
+                  <td>souhlas</td>
+                  <td>dle nastavení nástroje</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Tuto tabulku je nutné po spuštění webu technicky ověřit. Pokud budou nasazeny další nástroje, například Google Ads, Meta Pixel, Hotjar, Smartlook nebo jiné služby, je potřeba je do tabulky doplnit.</p>
+        </article>
+
+        <!-- 8 -->
+        <article class="legal-section" id="cp-8">
+          <h2 class="subtle">8. Souhlas s používáním cookies</h2>
+          <p>Při první návštěvě webu se vám může zobrazit cookie lišta, kde můžete rozhodnout, s jakými kategoriemi cookies souhlasíte.</p>
+          <p>Souhlas se musí vztahovat ke konkrétním účelům a musí být svobodný, konkrétní, informovaný a jednoznačný. ÚOOÚ zároveň uvádí, že uživatel musí mít jednoduchou možnost souhlas neudělit, aniž by mu byla způsobena újma, například nedostupnost obsahu webu.</p>
+          <p><strong>Doporučené nastavení cookie lišty:</strong></p>
+          <ul>
+            <li>tlačítko <strong>Přijmout vše</strong>,</li>
+            <li>tlačítko <strong>Odmítnout vše</strong>,</li>
+            <li>tlačítko <strong>Nastavení</strong>,</li>
+            <li>možnost samostatně zapnout nebo vypnout analytické, marketingové a preferenční cookies,</li>
+            <li>nezbytné cookies ponechat vždy aktivní,</li>
+            <li>neukládat analytické a marketingové cookies před udělením souhlasu.</li>
+          </ul>
+        </article>
+
+        <!-- 9 -->
+        <article class="legal-section" id="cp-9">
+          <h2 class="subtle">9. Jak můžete změnit nebo odvolat souhlas</h2>
+          <p>Své nastavení cookies můžete kdykoliv změnit nebo svůj souhlas odvolat prostřednictvím odkazu:</p>
+          <p><strong><a onclick="alert('Wireframe — v reálném webu zde otevře CMP lištu pro nastavení cookies.');" style="cursor: pointer;">Nastavení cookies</a></strong></p>
+          <p>Doporučujeme tento odkaz umístit do patičky webu vedle odkazů <strong>GDPR</strong>, <strong>Cookie policy</strong> a <strong>Podmínky použití</strong>.</p>
+          <p>Odvoláním souhlasu není dotčena zákonnost zpracování, které proběhlo před jeho odvoláním.</p>
+        </article>
+
+        <!-- 10 -->
+        <article class="legal-section" id="cp-10">
+          <h2 class="subtle">10. Nastavení cookies v prohlížeči</h2>
+          <p>Používání cookies můžete ovlivnit také přímo ve svém internetovém prohlížeči. V prohlížeči můžete cookies blokovat, mazat nebo nastavit pravidla pro jejich ukládání.</p>
+          <p>Upozorňujeme, že pokud zablokujete všechny cookies, některé části webu nemusí fungovat správně.</p>
+        </article>
+
+        <!-- 11 -->
+        <article class="legal-section" id="cp-11">
+          <h2 class="subtle">11. Zpracování osobních údajů v souvislosti s cookies</h2>
+          <p>Některé cookies a obdobné technologie mohou vést ke zpracování osobních údajů, například online identifikátorů, IP adresy, informací o zařízení, prohlížeči nebo chování na webu.</p>
+          <p>Podrobné informace o zpracování osobních údajů najdete v dokumentu:</p>
+          <p><strong><a onclick="showPage('ochrana-osobnich-udaju')" style="cursor: pointer;">Ochrana osobních údajů</a></strong></p>
+        </article>
+
+        <!-- 12 -->
+        <article class="legal-section" id="cp-12">
+          <h2 class="subtle">12. Předávání údajů třetím stranám</h2>
+          <p>V souvislosti s používáním cookies a obdobných technologií mohou být údaje předávány poskytovatelům použitých nástrojů, zejména poskytovatelům analytických, reklamních, technických nebo cloudových služeb.</p>
+          <p>Může jít zejména o:</p>
+          <ul>
+            <li>Google Ireland Limited / Google LLC,</li>
+            <li>Seznam.cz, a.s.,</li>
+            <li>poskytovatele cookie lišty,</li>
+            <li>poskytovatele webhostingu,</li>
+            <li>další dodavatele technických nebo marketingových nástrojů, pokud budou na webu nasazeni.</li>
+          </ul>
+          <p>Někteří poskytovatelé mohou zpracovávat údaje také mimo Evropskou unii nebo Evropský hospodářský prostor. V takovém případě musí být zajištěny odpovídající záruky podle GDPR.</p>
+        </article>
+
+        <!-- 13 -->
+        <article class="legal-section" id="cp-13">
+          <h2 class="subtle">13. Změny Cookie policy</h2>
+          <p>Tuto Cookie policy můžeme čas od času aktualizovat, zejména pokud dojde ke změně používaných technologií, analytických nebo marketingových nástrojů, právních předpisů nebo způsobu fungování webu.</p>
+          <p>Aktuální verze je vždy dostupná na této stránce.</p>
+          <p class="legal-update"><strong>Datum poslední aktualizace:</strong> 8. května 2026</p>
+        </article>
+
+        <!-- Bottom CTA -->
+        <div class="legal-cta">
+          <p>Můžete kdykoliv změnit nastavení cookies kliknutím na odkaz <strong>„Nastavení cookies"</strong> v patičce. Máte další dotaz? Napište nám na <a href="mailto:info@projektgastro.cz">info@projektgastro.cz</a>.</p>
+        </div>
+
+        <!-- ============================================================
+             PŘÍLOHA — pro implementaci CMP / cookie lišty
+             Tato sekce není určena pro koncového uživatele. Vývojář
+             ji při finálním nasazení přesune do interní dokumentace
+             a tady nahradí HTML komentářem.
+             ============================================================ -->
+        <div class="legal-appendix">
+          <span class="legal-appendix-label">Příloha — pro implementaci CMP</span>
+
+          <h2>Doporučený text cookie lišty</h2>
+          <div class="legal-appendix-block">
+            <h3>Krátká verze lišty</h3>
+            <p><strong>Používáme cookies</strong></p>
+            <p>Používáme cookies k zajištění správného fungování webu, měření návštěvnosti a vyhodnocování marketingových kampaní. Nezbytné cookies používáme vždy, analytické a marketingové cookies pouze s vaším souhlasem.</p>
+            <p><strong>Tlačítka:</strong> Přijmout vše · Odmítnout vše · Nastavení</p>
+            <p><strong>Odkaz:</strong> Cookie policy</p>
+          </div>
+
+          <h2>Doporučený text nastavení cookies</h2>
+          <div class="legal-appendix-block">
+            <h3>Nastavení cookies</h3>
+            <p>Zde můžete upravit, s jakými kategoriemi cookies souhlasíte. Nezbytné cookies jsou nutné pro správné fungování webu a nelze je vypnout.</p>
+
+            <h3>Nezbytné cookies</h3>
+            <p>Tyto cookies jsou nutné pro fungování webu, bezpečnost, odeslání formuláře a uložení vašeho nastavení cookies.<br><strong>Stav:</strong> vždy aktivní</p>
+
+            <h3>Analytické cookies</h3>
+            <p>Pomáhají nám měřit návštěvnost webu a zlepšovat jeho obsah a strukturu.<br><strong>Stav:</strong> volitelné</p>
+
+            <h3>Marketingové cookies</h3>
+            <p>Pomáhají nám vyhodnocovat účinnost reklamních kampaní a případně zobrazovat relevantnější reklamu.<br><strong>Stav:</strong> volitelné</p>
+
+            <h3>Funkční / preferenční cookies</h3>
+            <p>Pomáhají uložit některá nastavení a zlepšit pohodlí při používání webu.<br><strong>Stav:</strong> volitelné</p>
+
+            <p style="margin-top: 1rem;"><strong>Tlačítka:</strong> Uložit nastavení · Přijmout vše · Odmítnout vše</p>
+          </div>
+
+          <h2>Technické poznámky pro programátora</h2>
+          <div class="legal-appendix-block">
+            <ol>
+              <li><strong>GA4, Sklik a marketingové tagy nespouštět před souhlasem.</strong> Výjimkou mohou být pouze nezbytné technické cookies.</li>
+              <li><strong>Google Tag Manager musí respektovat Consent Mode / cookie consent.</strong> GTM sám o sobě není problém, ale nesmí před souhlasem spouštět tagy, které ukládají nebo čtou analytické či marketingové cookies.</li>
+              <li><strong>Do patičky doplnit odkaz „Nastavení cookies".</strong> Nestačí mít jen Cookie policy. Uživatel musí mít možnost své rozhodnutí později změnit.</li>
+              <li><strong>Po nasazení provést cookie scan.</strong> Teprve po reálném nasazení GA4, GTM, Sklik a případných dalších nástrojů bude možné doplnit přesný seznam cookies, jejich názvy a dobu uchování.</li>
+              <li><strong>Patička webu už počítá s odkazy GDPR, Cookie policy a Podmínky použití.</strong> Stačí doplnit funkční proklik a případně přidat také „Nastavení cookies".</li>
+            </ol>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================================
+     PAGE: PODMÍNKY POUŽITÍ
+     URL: /podminky-pouziti
+     SEO Title: Podmínky použití | ProjektGastro.cz
+     Meta description: Podmínky používání webu ProjektGastro.cz,
+        informace o provozovateli webu, obsahu webu, odpovědnosti,
+        autorských právech, kontaktním formuláři a právních dokumentech.
+     ============================================================ -->
+<div class="page" id="page-podminky-pouziti">
+  <div class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a onclick="showPage('home')">Home</a> / Podmínky použití</div>
+      <h1>Podmínky použití</h1>
+      <p>Tyto podmínky použití upravují pravidla používání webových stránek ProjektGastro.cz. Používáním tohoto webu berete na vědomí níže uvedené podmínky.</p>
+    </div>
+  </div>
+
+  <section>
+    <div class="container">
+      <div class="legal-content">
+
+        <p>Web slouží k prezentaci služeb v oblasti projekční přípravy gastronomických provozů, k představení vybraných projektů a referencí, k informování o způsobu spolupráce a k umožnění kontaktu s provozovatelem webu.</p>
+
+        <!-- TABLE OF CONTENTS -->
+        <div class="legal-toc">
+          <div class="legal-toc-title">Obsah</div>
+          <ol>
+            <li><a href="#pp-1">Provozovatel webu</a></li>
+            <li><a href="#pp-2">Účel webu</a></li>
+            <li><a href="#pp-3">Používání webu</a></li>
+            <li><a href="#pp-4">Kontaktní formulář</a></li>
+            <li><a href="#pp-5">Informace na webu</a></li>
+            <li><a href="#pp-6">Reference a projekty</a></li>
+            <li><a href="#pp-7">Autorská práva a práva k obsahu</a></li>
+            <li><a href="#pp-8">Externí odkazy</a></li>
+            <li><a href="#pp-9">Dostupnost a technický provoz webu</a></li>
+            <li><a href="#pp-10">Odpovědnost za odborné informace</a></li>
+            <li><a href="#pp-11">Ochrana osobních údajů</a></li>
+            <li><a href="#pp-12">Cookies</a></li>
+            <li><a href="#pp-13">Změny webu a podmínek použití</a></li>
+            <li><a href="#pp-14">Rozhodné právo</a></li>
+            <li><a href="#pp-15">Závěrečná ustanovení</a></li>
+          </ol>
+        </div>
+
+        <!-- 1 -->
+        <article class="legal-section" id="pp-1">
+          <h2 class="subtle">1. Provozovatel webu</h2>
+          <p>Provozovatelem webu ProjektGastro.cz je:</p>
+          <div class="controller-box">
+            <div class="name">Gastronomik KV s.r.o.</div>
+            <p>Masarykova 528<br>357 34 Nové Sedlo<br>Česká republika</p>
+            <p>IČO: 29099528 · DIČ: CZ29099528</p>
+            <p>Společnost je zapsána v obchodním rejstříku vedeném u Krajského soudu v Plzni, oddíl C, vložka 24689.</p>
+            <p style="margin-top: 0.75rem;"><strong>Kontaktní údaje:</strong><br>
+              E-mail: <a href="mailto:info@projektgastro.cz">info@projektgastro.cz</a><br>
+              Telefon: <a href="tel:+420774637294">+420 774 637 294</a><br>
+              Web: <a href="https://www.projektgastro.cz">www.projektgastro.cz</a>
+            </p>
+          </div>
+        </article>
+
+        <!-- 2 -->
+        <article class="legal-section" id="pp-2">
+          <h2 class="subtle">2. Účel webu</h2>
+          <p>Web ProjektGastro.cz má informační a prezentační charakter.</p>
+          <p>Jeho účelem je zejména:</p>
+          <ul>
+            <li>představit služby v oblasti projekční přípravy gastronomických provozů,</li>
+            <li>informovat o typických fázích spolupráce,</li>
+            <li>prezentovat vybrané projekty a reference,</li>
+            <li>umožnit návštěvníkům kontaktovat provozovatele webu,</li>
+            <li>poskytnout základní informace pro investory, architekty, projektanty, provozovatele gastronomických provozů, veřejný sektor a developery.</li>
+          </ul>
+          <p>Informace uvedené na webu mají obecný charakter a nenahrazují individuální odborné posouzení konkrétního projektu.</p>
+        </article>
+
+        <!-- 3 -->
+        <article class="legal-section" id="pp-3">
+          <h2 class="subtle">3. Používání webu</h2>
+          <p>Web můžete používat běžným způsobem, zejména pro prohlížení informací, odeslání poptávky nebo kontaktování provozovatele.</p>
+          <p>Při používání webu nesmíte:</p>
+          <ul>
+            <li>zasahovat do bezpečnosti, provozu nebo technické infrastruktury webu,</li>
+            <li>pokoušet se získat neoprávněný přístup k neveřejným částem webu,</li>
+            <li>zneužívat kontaktní formulář k zasílání spamu, škodlivého obsahu nebo nepravdivých údajů,</li>
+            <li>nahrávat prostřednictvím formuláře soubory obsahující malware, viry nebo jiný škodlivý kód,</li>
+            <li>používat obsah webu způsobem, který porušuje práva provozovatele nebo třetích osob.</li>
+          </ul>
+          <p>Provozovatel si vyhrazuje právo omezit nebo zablokovat přístup k webu v případě podezření na zneužití, bezpečnostní riziko nebo porušení těchto podmínek.</p>
+        </article>
+
+        <!-- 4 -->
+        <article class="legal-section" id="pp-4">
+          <h2 class="subtle">4. Kontaktní formulář</h2>
+          <p>Web obsahuje kontaktní formulář, jehož účelem je umožnit návštěvníkům zaslat dotaz, poptávku nebo základní informace o připravovaném projektu. Formulář obsahuje zejména pole pro jméno, e-mail, volitelný telefon, zprávu a možnost připojit soubory.</p>
+          <p>Odesláním formuláře nevzniká automaticky smluvní vztah mezi návštěvníkem a provozovatelem webu. Odeslání formuláře slouží pouze k zahájení komunikace, posouzení dotazu nebo přípravě případné nabídky.</p>
+          <p>Návštěvník odpovídá za správnost údajů, které prostřednictvím formuláře uvede. Pokud návštěvník připojí soubory, odpovídá za to, že je oprávněn tyto soubory provozovateli poskytnout a že jejich obsah neporušuje práva třetích osob.</p>
+          <p>Provozovatel si vyhrazuje právo neodpovídat na zprávy, pokud jsou zjevně nepravdivé, neúplné, obtěžující, technicky škodlivé, nesouvisejí s činností provozovatele nebo mají znaky spamu.</p>
+        </article>
+
+        <!-- 5 -->
+        <article class="legal-section" id="pp-5">
+          <h2 class="subtle">5. Informace na webu</h2>
+          <p>Provozovatel se snaží, aby informace na webu byly přesné, aktuální a srozumitelné. Přesto nelze zaručit, že veškeré informace budou vždy zcela úplné, aktuální nebo bez chyb.</p>
+          <p>Informace o službách, projektech, referencích, postupech spolupráce, typických činnostech nebo očekávaných výstupech mají obecný informační charakter. Konkrétní rozsah služeb, odpovědnosti, termíny, cena a další podmínky se vždy stanoví individuálně podle povahy konkrétního projektu a případné smluvní dohody.</p>
+          <p>Žádná informace uvedená na webu nepředstavuje závaznou nabídku na uzavření smlouvy, pokud není výslovně uvedeno jinak.</p>
+        </article>
+
+        <!-- 6 -->
+        <article class="legal-section" id="pp-6">
+          <h2 class="subtle">6. Reference a projekty</h2>
+          <p>Web může obsahovat informace o vybraných projektech, referencích, typických zakázkách nebo ukázkách dosavadní odborné činnosti.</p>
+          <p>Tyto informace slouží pouze k ilustraci zkušeností a odborného zaměření provozovatele. Neznamenají, že každý budoucí projekt bude mít totožný rozsah, průběh, cenu, výsledek nebo časovou náročnost.</p>
+          <p>Pokud jsou u referencí uvedeny fotografie, názvy projektů, obchodní označení nebo citace, jsou používány za účelem prezentace odborné činnosti provozovatele a v rozsahu, v jakém je jejich použití oprávněné.</p>
+        </article>
+
+        <!-- 7 -->
+        <article class="legal-section" id="pp-7">
+          <h2 class="subtle">7. Autorská práva a práva k obsahu</h2>
+          <p>Obsah webu, zejména texty, grafika, návrhy, struktura stránek, ikony, fotografie, logotyp, vizuální styl a další prvky webu, je chráněn právními předpisy na ochranu duševního vlastnictví, pokud není uvedeno jinak.</p>
+          <p>Bez předchozího písemného souhlasu provozovatele není dovoleno zejména:</p>
+          <ul>
+            <li>kopírovat obsah webu pro komerční účely,</li>
+            <li>šířit nebo upravovat texty, grafické prvky, fotografie nebo jiné části webu,</li>
+            <li>používat logotyp nebo vizuální prvky ProjektGastro.cz,</li>
+            <li>vytvářet odvozená díla z obsahu webu,</li>
+            <li>používat obsah webu způsobem, který by mohl poškodit provozovatele nebo vyvolat dojem neexistující spolupráce.</li>
+          </ul>
+          <p>Běžné sdílení odkazu na web nebo citace krátkých částí textu s uvedením zdroje tím není dotčeno.</p>
+        </article>
+
+        <!-- 8 -->
+        <article class="legal-section" id="pp-8">
+          <h2 class="subtle">8. Externí odkazy</h2>
+          <p>Web může obsahovat odkazy na webové stránky třetích stran, například profily na sociálních sítích, profesní platformy, nástroje nebo jiné související zdroje.</p>
+          <p>Provozovatel neodpovídá za obsah, dostupnost, bezpečnost ani podmínky používání webů třetích stran. Návštěvník používá externí odkazy na vlastní odpovědnost a doporučuje se, aby se seznámil s podmínkami a zásadami ochrany osobních údajů daných třetích stran.</p>
+        </article>
+
+        <!-- 9 -->
+        <article class="legal-section" id="pp-9">
+          <h2 class="subtle">9. Dostupnost a technický provoz webu</h2>
+          <p>Provozovatel se snaží zajistit běžnou dostupnost webu. Nezaručuje však nepřetržitou dostupnost, bezchybný provoz ani kompatibilitu se všemi zařízeními, prohlížeči nebo technickými konfiguracemi.</p>
+          <p>Web může být dočasně nedostupný zejména z důvodu údržby, aktualizací, technických poruch, zásahů třetích stran, bezpečnostních opatření nebo událostí mimo kontrolu provozovatele.</p>
+          <p>Provozovatel neodpovídá za škodu způsobenou dočasnou nedostupností webu, technickou chybou, ztrátou dat při přenosu, zásahem třetí osoby nebo použitím webu v rozporu s těmito podmínkami.</p>
+        </article>
+
+        <!-- 10 -->
+        <article class="legal-section" id="pp-10">
+          <h2 class="subtle">10. Odpovědnost za odborné informace</h2>
+          <p>Obsah webu může obsahovat informace související s projektovou přípravou gastronomických provozů, povolovacími procesy, koordinací profesí, hygienickými nebo provozními požadavky.</p>
+          <p>Tyto informace jsou uvedeny pouze v obecné rovině. Každý projekt gastronomického provozu je individuální a vyžaduje samostatné odborné posouzení podle konkrétního prostoru, účelu provozu, kapacity, technických parametrů, právních požadavků a dalších okolností.</p>
+          <p>Provozovatel neodpovídá za rozhodnutí učiněná pouze na základě obecných informací uvedených na webu bez individuální konzultace nebo odborného posouzení.</p>
+        </article>
+
+        <!-- 11 -->
+        <article class="legal-section" id="pp-11">
+          <h2 class="subtle">11. Ochrana osobních údajů</h2>
+          <p>Při používání webu může docházet ke zpracování osobních údajů, zejména pokud návštěvník odešle kontaktní formulář, kontaktuje provozovatele e-mailem nebo telefonicky, případně udělí souhlas s používáním analytických nebo marketingových cookies.</p>
+          <p>Podrobné informace o zpracování osobních údajů jsou uvedeny v samostatném dokumentu:</p>
+          <p><strong><a onclick="showPage('ochrana-osobnich-udaju')" style="cursor: pointer;">Ochrana osobních údajů</a></strong></p>
+        </article>
+
+        <!-- 12 -->
+        <article class="legal-section" id="pp-12">
+          <h2 class="subtle">12. Cookies</h2>
+          <p>Web může používat cookies a obdobné technologie, zejména za účelem zajištění technického fungování webu, měření návštěvnosti a vyhodnocování marketingových kampaní.</p>
+          <p>Podrobné informace o používání cookies jsou uvedeny v samostatném dokumentu:</p>
+          <p><strong><a onclick="showPage('zasady-pouzivani-cookies')" style="cursor: pointer;">Zásady používání cookies</a></strong></p>
+          <p>Netechnické cookies, například analytické nebo marketingové cookies, obecně vyžadují souhlas uživatele podle pravidel pro cookies. ÚOOÚ uvádí, že povinnost získat souhlas s použitím netechnických cookies vyplývá ze zákona o elektronických komunikacích.</p>
+        </article>
+
+        <!-- 13 -->
+        <article class="legal-section" id="pp-13">
+          <h2 class="subtle">13. Změny webu a podmínek použití</h2>
+          <p>Provozovatel si vyhrazuje právo kdykoliv upravit obsah webu, jeho strukturu, rozsah zveřejněných informací, kontaktní údaje, technické řešení nebo tyto podmínky použití.</p>
+          <p>Aktuální verze podmínek použití je vždy dostupná na této stránce.</p>
+          <p>Změny podmínek jsou účinné okamžikem jejich zveřejnění na webu, pokud není uvedeno jinak.</p>
+        </article>
+
+        <!-- 14 -->
+        <article class="legal-section" id="pp-14">
+          <h2 class="subtle">14. Rozhodné právo</h2>
+          <p>Tyto podmínky použití se řídí právním řádem České republiky.</p>
+          <p>Případné spory vzniklé v souvislosti s používáním webu budou řešeny především smírnou cestou. Pokud se spor nepodaří vyřešit smírně, bude řešen příslušnými soudy České republiky.</p>
+        </article>
+
+        <!-- 15 -->
+        <article class="legal-section" id="pp-15">
+          <h2 class="subtle">15. Závěrečná ustanovení</h2>
+          <p>Pokud se některé ustanovení těchto podmínek ukáže jako neplatné nebo neúčinné, nemá to vliv na platnost a účinnost ostatních ustanovení.</p>
+          <p>Tyto podmínky použití jsou účinné ode dne jejich zveřejnění na webu.</p>
+          <p class="legal-update"><strong>Datum poslední aktualizace:</strong> 8. května 2026</p>
+        </article>
+
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================================
+     PAGE: 404 — Stránka nebyla nalezena
+     URL: /404 (server vrací reálný HTTP 404 status, ne redirect na 200)
+     <meta name="robots" content="noindex">
+     GA4 event: 404_error
+     ============================================================ -->
+<div class="page" id="page-404">
+
+  <!-- Hero — vizuál + H1 + subtitle + primární CTA -->
+  <section class="error-hero">
+    <div class="container">
+      <div class="error-visual" aria-hidden="true">
+        <svg class="error-blueprint" viewBox="0 0 600 220" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <pattern id="error-dots" x="0" y="0" width="18" height="18" patternUnits="userSpaceOnUse">
+              <circle cx="9" cy="9" r="1.1" fill="#c7d7fb" />
+            </pattern>
+          </defs>
+          <rect width="600" height="220" fill="url(#error-dots)" />
+          <!-- Decorative "incomplete" floor plan lines -->
+          <g stroke="#a8bfe6" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.55">
+            <path d="M 50 50 L 50 180 L 200 180" />
+            <path d="M 400 40 L 560 40 L 560 160" />
+            <line x1="80" y1="100" x2="170" y2="100" />
+            <line x1="80" y1="135" x2="170" y2="135" />
+            <line x1="430" y1="80" x2="540" y2="80" />
+            <line x1="430" y1="115" x2="540" y2="115" />
+          </g>
+        </svg>
+        <div class="error-number">404</div>
+      </div>
+
+      <h1>Stránka nebyla nalezena</h1>
+      <p style="color: var(--text-2); font-size: 1.05rem; margin-top: 1rem; max-width: 560px; margin-left: auto; margin-right: auto;">Adresa, kterou hledáte, neexistuje, byla přesunuta nebo se na ni právě pracuje. Pokračujme někam, kde to dává smysl.</p>
+
+      <div style="margin-top: 1.75rem;">
+        <button class="btn btn-primary" onclick="showPage('home')">Zpět na úvodní stránku</button>
+      </div>
+
+      <p class="error-broken-link">
+        Pokud jste sem přišli z odkazu na webu, dejte nám prosím vědět na
+        <a href="mailto:info@projektgastro.cz">info@projektgastro.cz</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- Rozcestník na hlavní sekce -->
+  <section class="alt">
+    <div class="container">
+      <h2>Pokračujte na jednu z hlavních sekcí</h2>
+      <p class="subtitle">Místo bloudění zkuste pokračovat na jednu z hlavních stránek webu.</p>
+      <div class="error-cards">
+        <div class="card" onclick="showPage('sluzby')">
+          <h3>Služby</h3>
+          <p>Přehled našich projekčních prací.</p>
+          <a class="more">Otevřít →</a>
+        </div>
+        <div class="card" onclick="showPage('projekty')">
+          <h3>Projekty</h3>
+          <p>Ukázky našich realizací.</p>
+          <a class="more">Otevřít →</a>
+        </div>
+        <div class="card" onclick="showPage('faq')">
+          <h3>FAQ</h3>
+          <p>Odpovědi na nejčastější dotazy.</p>
+          <a class="more">Otevřít →</a>
+        </div>
+        <div class="card" onclick="showPage('kontakt')">
+          <h3>Kontakt</h3>
+          <p>Spojte se s námi přímo.</p>
+          <a class="more">Otevřít →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Konverzní blok -->
+  <div class="conv-block">
+    <div class="container">
+      <h2>Máte projekt v přípravě?</h2>
+      <p class="subtitle">Rádi s vámi projdeme základní parametry projektu a doporučíme další postup přípravy.</p>
+      <button class="btn btn-primary" onclick="showPage('kontakt')">Konzultovat projekt</button>
+      <div class="conv-meta" style="margin-top: 1.5rem;">Reagujeme do 24 hodin. Konzultace probíhá online nebo osobně.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <img class="footer-logo" src="projektgastro_logo_dark.png" alt="ProjektGastro.cz">
+      <p class="footer-claim">Projekční příprava gastronomických provozů od konzultace po projektovou dokumentaci a odborný dohled realizace.</p>
+    </div>
+    <div>
+      <h5>Navigace</h5>
+      <ul>
+        <li><a onclick="showPage('sluzby')">Služby</a></li>
+        <li><a onclick="showPage('projekty')">Projekty</a></li>
+        <li><a onclick="showPage('jak-pracujeme')">Jak pracujeme</a></li>
+        <li><a onclick="showPage('faq')">FAQ</a></li>
+        <li><a onclick="showPage('kontakt')">Kontakt</a></li>
+      </ul>
+    </div>
+    <div>
+      <h5>Kontakt</h5>
+      <ul>
+        <li>Telefon<br><strong style="color: white;"><a href="tel:+420774637294">+420 774 637 294</a></strong></li>
+        <li style="margin-top: 0.5rem;">E-mail<br><strong style="color: white;"><a href="mailto:info@projektgastro.cz">info@projektgastro.cz</a></strong></li>
+        <li style="margin-top: 0.5rem;"><a href="https://www.linkedin.com/company/gastronomik-kv/" target="_blank" rel="noopener">LinkedIn →</a></li>
+      </ul>
+    </div>
+    <div>
+      <h5>Právní informace</h5>
+      <div class="footer-legal-line">
+        <strong>Gastronomik KV s.r.o.</strong>
+        Masarykova 528<br>
+        357 34 Nové Sedlo<br>
+        IČO: 29099528 · DIČ: CZ29099528<br>
+        Zapsána u Krajského soudu v Plzni,<br>oddíl C, vložka 24689
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div>© <span id="year">2026</span> ProjektGastro.cz</div>
+    <div class="footer-links-bottom">
+      <a onclick="showPage('ochrana-osobnich-udaju')">Ochrana osobních údajů</a>
+      <a onclick="showPage('zasady-pouzivani-cookies')">Zásady používání cookies</a>
+      <a onclick="showCookieBanner()">Nastavení cookies</a>
+      <a onclick="showPage('podminky-pouziti')">Podmínky použití</a>
+      <a onclick="showPage('404')" class="wireframe-only" title="Wireframe pomůcka — odstranitelné při finalizaci">Vyzkoušet 404</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================================================
+     MOBILE STICKY CTA — fixní spodní lišta s CTA
+     Zobrazuje se jen na mobilu (≤ 980 px). Skrývá se na stránkách
+     Kontakt, Děkujeme a 404.
+     ============================================================ -->
+<div class="mobile-sticky-cta" id="mobileStickyCta" role="navigation" aria-label="Rychlé akce">
+  <a href="tel:+420774637294" class="mobile-sticky-phone" aria-label="Zavolat">
+    <span aria-hidden="true">☏</span>
+  </a>
+  <button class="btn btn-primary" onclick="showPage('kontakt')">Konzultovat projekt</button>
+</div>
+
+<!-- ============================================================
+     SCROLL-TO-TOP — plovoucí tlačítko
+     Zobrazuje se po scrollu > 400 px.
+     ============================================================ -->
+<button class="scroll-top" id="scrollTop" aria-label="Zpět nahoru" title="Zpět nahoru" onclick="window.scrollTo({top:0, behavior:'smooth'})">↑</button>
+
+<!-- ============================================================
+     COOKIE CONSENT BANNER — mockup CMP lišty
+     Per Cookie Policy sekce 8 + Příloha. V produkci nahradit reálným
+     CMP řešením (Cookiebot, Complianz nebo vlastní), které respektuje
+     Consent Mode v Google Tag Manageru a neukládá analytické/marketingové
+     cookies před udělením souhlasu.
+     ============================================================ -->
+<div class="cookie-banner" id="cookieBanner" role="dialog" aria-labelledby="cookieBannerTitle" aria-describedby="cookieBannerText">
+  <div class="cookie-banner-inner">
+    <div class="cookie-banner-text">
+      <strong id="cookieBannerTitle">Používáme cookies</strong>
+      <p id="cookieBannerText">Používáme cookies k zajištění správného fungování webu, měření návštěvnosti a vyhodnocování marketingových kampaní. Nezbytné cookies používáme vždy, analytické a marketingové cookies pouze s vaším souhlasem. <a onclick="showPage('zasady-pouzivani-cookies'); hideCookieBanner();">Cookie policy</a></p>
+    </div>
+    <div class="cookie-banner-actions">
+      <button class="btn btn-outline" onclick="alert('Wireframe — v reálném webu zde otevře panel detailního nastavení cookies (per kategorii).'); hideCookieBanner();">Nastavení</button>
+      <button class="btn btn-outline" onclick="hideCookieBanner('rejected')">Odmítnout vše</button>
+      <button class="btn btn-primary" onclick="hideCookieBanner('accepted')">Přijmout vše</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* SEO mapping — title + meta description per stránku.
+     Pro produkční nasazení musí být tato data renderována server-side
+     (každá URL musí mít unikátní <title> a <meta description> přímo v HTML
+     ještě před načtením JS — kvůli Google crawleru a Open Graph sharingu).
+     Zdroj: SEO tabulka v původním Wordu brief.                           */
+  const pageMeta = {
+    'home': {
+      title: 'Projekt gastronomických provozů | ProjektGastro',
+      description: 'Projekční příprava gastronomických provozů od návrhu provozu po projektovou dokumentaci a odborný dohled realizace.'
+    },
+    'sluzby': {
+      title: 'Služby — projekt gastronomických provozů | ProjektGastro',
+      description: 'Konzultace záměru, projektová dokumentace gastronomických technologií a odborný dohled při realizaci gastronomických provozů.'
+    },
+    'projekty': {
+      title: 'Projekty gastronomických provozů | ProjektGastro',
+      description: 'Ukázka projektů gastronomických provozů připravovaných pro investory, architekty a veřejné instituce.'
+    },
+    'projekt-imperial': {
+      title: 'Hotelová kuchyně — Hotel Imperial Praha | ProjektGastro',
+      description: 'Referenční projekt gastronomického provozu — návrh technologie, projektová dokumentace a spolupráce při realizaci.'
+    },
+    'jak-pracujeme': {
+      title: 'Jak probíhá projekt gastronomického provozu | ProjektGastro',
+      description: 'Přehled kroků přípravy projektu gastronomického provozu od analýzy záměru po odborný dohled realizace.'
+    },
+    'faq': {
+      title: 'Nejčastější otázky k projektu gastronomického provozu | ProjektGastro',
+      description: 'Odpovědi na nejčastější otázky k přípravě projektu gastronomického provozu, projektové dokumentaci a průběhu spolupráce.'
+    },
+    'kontakt': {
+      title: 'Kontakt | ProjektGastro',
+      description: 'Kontaktujte nás ohledně přípravy projektu gastronomického provozu. Úvodní konzultace je nezávazná.'
+    },
+    'dekujeme': {
+      title: 'Děkujeme za poptávku | ProjektGastro',
+      description: 'Vaše poptávka byla úspěšně odeslána. Reagujeme do 1 pracovního dne.'
+    },
+    'ochrana-osobnich-udaju': {
+      title: 'Ochrana osobních údajů | ProjektGastro.cz',
+      description: 'Informace o tom, jak ProjektGastro.cz zpracovává osobní údaje návštěvníků webu, zájemců o konzultaci a osob, které nás kontaktují.'
+    },
+    'zasady-pouzivani-cookies': {
+      title: 'Cookie policy | ProjektGastro.cz',
+      description: 'Informace o používání cookies a obdobných technologií na webu ProjektGastro.cz, včetně analytických a marketingových nástrojů.'
+    },
+    'podminky-pouziti': {
+      title: 'Podmínky použití | ProjektGastro.cz',
+      description: 'Podmínky používání webu ProjektGastro.cz, informace o provozovateli webu, obsahu webu, odpovědnosti, autorských právech a právních dokumentech.'
+    },
+    '404': {
+      title: 'Stránka nebyla nalezena | ProjektGastro',
+      description: 'Stránka nebyla nalezena.'
+    }
+  };
+
+  // jednoduchý "router" mezi stránkami
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const target = document.getElementById('page-' + id);
+    if (target) target.classList.add('active');
+
+    document.querySelectorAll('.menu a').forEach(a => a.classList.remove('active'));
+    const menuItem = document.querySelector('.menu a[data-page="' + id + '"]');
+    if (menuItem) menuItem.classList.add('active');
+
+    // Update <title> + <meta description> dle aktuální stránky
+    const meta = pageMeta[id];
+    if (meta) {
+      document.title = meta.title;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) metaDesc.setAttribute('content', meta.description);
+    }
+
+    // Skrýt mobilní sticky CTA na stránkách, kde nedává smysl
+    const stickyCta = document.getElementById('mobileStickyCta');
+    if (stickyCta) {
+      const hideOn = ['kontakt', 'dekujeme', '404'];
+      stickyCta.classList.toggle('hidden', hideOn.includes(id));
+    }
+
+    // Reading progress bar — pouze na dlouhých právních stránkách
+    const longPages = ['ochrana-osobnich-udaju', 'zasady-pouzivani-cookies', 'podminky-pouziti'];
+    document.body.classList.toggle('show-progress', longPages.includes(id));
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Cookie banner controls
+  function hideCookieBanner(/* state */) {
+    document.getElementById('cookieBanner').classList.add('hidden');
+    document.body.classList.remove('cookie-shown');
+    // V reálném webu zde uložit volbu do localStorage/cookies + spustit příslušné tagy
+  }
+  function showCookieBanner() {
+    document.getElementById('cookieBanner').classList.remove('hidden');
+    document.body.classList.add('cookie-shown');
+  }
+  // Při načtení stránky je banner viditelný — body označíme třídou pro
+  // úpravu spodního paddingu na mobilu (aby mobile CTA nepřekrývalo lištu).
+  document.body.classList.add('cookie-shown');
+
+  // sticky shrink nav + scroll-to-top viditelnost + reading progress
+  const progressBar = document.getElementById('readingProgress');
+  window.addEventListener('scroll', () => {
+    const nav = document.getElementById('topnav');
+    if (window.scrollY > 60) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+
+    const scrollTopBtn = document.getElementById('scrollTop');
+    if (scrollTopBtn) {
+      scrollTopBtn.classList.toggle('visible', window.scrollY > 400);
+    }
+
+    // Update reading progress bar width (jen pokud je viditelný)
+    if (progressBar && document.body.classList.contains('show-progress')) {
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = docHeight > 0 ? Math.min(100, (window.scrollY / docHeight) * 100) : 0;
+      progressBar.style.width = pct + '%';
+    }
+  }, { passive: true });
+
+  // dynamický rok v copyrightu
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  // ========== FORM VALIDATION ==========
+  function validateField(field) {
+    const label = field.closest('label') || field.closest('.gdpr-check');
+    const errorSpan = field.type === 'checkbox'
+      ? document.getElementById('gdpr-error')
+      : label && label.querySelector('.form-error');
+    let errorMsg = '';
+
+    if (field.type === 'checkbox') {
+      if (field.required && !field.checked) errorMsg = field.dataset.error || 'Toto pole je povinné.';
+    } else if (field.required && !field.value.trim()) {
+      errorMsg = field.dataset.error || 'Toto pole je povinné.';
+    } else if (field.value && !field.checkValidity()) {
+      errorMsg = field.dataset.error || 'Hodnota není ve správném formátu.';
+    }
+
+    if (errorMsg) {
+      field.classList.add('invalid');
+      if (label) label.classList.add('has-error');
+      if (errorSpan) { errorSpan.textContent = errorMsg; errorSpan.style.display = 'block'; }
+      return false;
+    } else {
+      field.classList.remove('invalid');
+      if (label) label.classList.remove('has-error');
+      if (errorSpan) { errorSpan.textContent = ''; errorSpan.style.display = ''; }
+      return true;
+    }
+  }
+
+  // Validace na blur (jen u required nebo s patternem)
+  document.querySelectorAll('#contactForm input, #contactForm textarea').forEach(el => {
+    el.addEventListener('blur', () => validateField(el));
+    el.addEventListener('input', () => {
+      if (el.classList.contains('invalid')) validateField(el);
+    });
+  });
+
+  function submitContactForm(e) {
+    e.preventDefault();
+    const form = document.getElementById('contactForm');
+    let allValid = true;
+    form.querySelectorAll('input[required], textarea[required], input[pattern]').forEach(el => {
+      if (!validateField(el)) allValid = false;
+    });
+    if (allValid) showPage('dekujeme');
+    else {
+      // scroll to first invalid field
+      const firstInvalid = form.querySelector('.invalid');
+      if (firstInvalid) firstInvalid.focus();
+    }
+    return false;
+  }
+
+  // ========== PROJEKTY FILTER ==========
+  // Client-side filtr přes data-category atribut na .project-card.
+  // Funguje pro wireframe (6 projektů). Pro produkci s rozsáhlejším
+  // portfoliem (50+) zvážit:
+  //   - server-side filtrování s paginací (nezatěžovat DOM stovkami karet)
+  //   - URL parametr (?kategorie=hotely-restaurace) pro hluboké odkazy
+  //   - sticky filter bar při scrollu dlouhého seznamu
+  function filterProjects(category) {
+    const cards = document.querySelectorAll('#projektyGrid .project-card');
+    const buttons = document.querySelectorAll('#projektyFilters button');
+    const empty = document.getElementById('projektyEmpty');
+
+    // Update active button
+    buttons.forEach(b => b.classList.toggle('active', b.dataset.filter === category));
+
+    let visibleCount = 0;
+    cards.forEach(card => {
+      const show = category === 'all' || card.dataset.category === category;
+      card.style.display = show ? '' : 'none';
+      if (show) visibleCount++;
+    });
+
+    if (empty) empty.classList.toggle('hidden', visibleCount > 0);
+  }
+
+  // FAQ filtr — jednoduchý vyhledávač
+  function filterFaq(q) {
+    q = q.toLowerCase().trim();
+    document.querySelectorAll('details.faq').forEach(d => {
+      const text = d.textContent.toLowerCase();
+      d.style.display = text.includes(q) ? '' : 'none';
+    });
+    // skryj prázdné kategorie
+    document.querySelectorAll('.faq-category').forEach(cat => {
+      const visible = [...cat.querySelectorAll('details.faq')].some(d => d.style.display !== 'none');
+      cat.style.display = visible ? '' : 'none';
+    });
+  }
+
+  // count-up animace pro fakta
+  function countUp(el, target) {
+    const duration = 1800;
+    const start = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const val = Math.round(target * eased);
+      const suffix = el.querySelector('small');
+      el.firstChild.textContent = val;
+      if (suffix) el.appendChild(suffix);
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          countUp(e.target, parseInt(e.target.dataset.count));
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.4 });
+    document.querySelectorAll('.stat-num[data-count]').forEach(el => obs.observe(el));
+  }
+
+  // Print: vyplnit aktuální datum do print header
+  const printDateEl = document.getElementById('printDate');
+  if (printDateEl) {
+    printDateEl.textContent = new Date().toLocaleDateString('cs-CZ', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    });
+  }
+
+  // ========== REVEAL ON SCROLL ==========
+  // Subtilní animace: elementy se objevují s fade-up jak vstupují do viewportu.
+  // Stejná rodina micro-interakcí jako count-up na Faktech.
+  (function() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    // Cílové selektory — co se má animovat
+    // POZOR: .step záměrně vynechané — process diagram má vlastní choreografii
+    // (anim-running) synchronizovanou s kreslením spojovací linky.
+    const revealSelectors = [
+      '.card',
+      '.project-card',
+      '.stat',
+      '.step-detail',
+      '.service-detail',
+      '.legal-section',
+      '.thank-hero .container > *',
+      '.conv-block .container > *',
+    ].join(', ');
+
+    document.querySelectorAll(revealSelectors).forEach(el => el.classList.add('reveal'));
+
+    // Stagger animation pro grupy — sourozenci se odhalují postupně po ~80 ms
+    document.querySelectorAll('.cards-4, .projects-grid, .stats, .error-cards').forEach(g => {
+      g.classList.add('reveal-stagger');
+    });
+
+    // Single observer pro všechny reveal elementy
+    const revealObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+  })();
+
+  // ========== PROCESS DIAGRAM ANIMATION ==========
+  // Spojovací linka se kreslí zleva doprava, kruhy + texty se objevují
+  // v sync s tím, jak linka prochází jejich pozicí.
+  // Trigger: Intersection Observer (anim-running třída).
+  (function() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const processObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('anim-running');
+          processObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.3 });
+
+    document.querySelectorAll('.process').forEach(p => processObserver.observe(p));
+  })();
+
+  // ========== 3D TILT NA KARTÁCH ==========
+  // Apple/Linear/Stripe-style premium hover. Karta se naklání podle
+  // pozice kurzoru. Skip na touch zařízeních a při prefers-reduced-motion.
+  (function() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (matchMedia('(hover: none)').matches) return; // touch devices
+
+    const MAX_TILT = 5; // max stupňů rotace
+    const cards = document.querySelectorAll('.card, .project-card');
+
+    cards.forEach(card => {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        // Normalizovat pozici kurzoru relativně k středu karty: -0.5 to 0.5
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        // Y-osa rotace závisí na X pozici (vlevo/vpravo)
+        // X-osa rotace závisí na Y pozici (nahoře/dole, invertované)
+        card.style.setProperty('--tilt-y', `${x * MAX_TILT * 2}deg`);
+        card.style.setProperty('--tilt-x', `${-y * MAX_TILT * 2}deg`);
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.setProperty('--tilt-x', '0deg');
+        card.style.setProperty('--tilt-y', '0deg');
+      });
+    });
+  })();
+</script>
+
+<!-- ============================================================
+     PRINT DOC FOOTER — patička dokumentu (1× na konci, navíc
+     k per-page footeru z @page CSS — pro starší browsery, které
+     @page named regions nepodporují).
+     ============================================================ -->
+<div class="print-only print-doc-footer">
+  © <span id="printFooterYear"></span> Gastronomik KV s.r.o. — Masarykova 528, 357 34 Nové Sedlo — IČO 29099528, DIČ CZ29099528 — Zapsána u Krajského soudu v Plzni, oddíl C, vložka 24689<br>
+  www.projektgastro.cz · info@projektgastro.cz · +420 774 637 294
+</div>
+<script>
+  const printFooterYearEl = document.getElementById('printFooterYear');
+  if (printFooterYearEl) printFooterYearEl.textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>
